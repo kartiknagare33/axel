@@ -6,6 +6,7 @@ export async function finishLogin(r: Response): Promise<string> {
   const body: any = await r.json();
   if (body.token) return body.token;
   if (!body.otpRequired) throw new Error(`login failed: ${JSON.stringify(body)}`);
+  if (body.mode === 'live') throw new Error('Tests need test mode. Run .\\otp-mode.ps1 test first.');
   const v = await fetch(`${API}/auth/verify-otp`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ challenge: body.challenge, code: process.env.TEST_OTP_CODE ?? '000000' }),

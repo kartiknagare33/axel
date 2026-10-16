@@ -24,7 +24,7 @@ const mk = async (email: string, name: string, hub = false) => {
   return (await pool.query('INSERT INTO users (email, password_hash, name, is_hub_admin, phone) VALUES ($1,$2,$3,$4,$5) RETURNING id', [email, hash, name, hub, phone])).rows[0].id as string;
 };
 
-const admin = await mk('admin@axel.dev', 'Asha Admin', true);
+const admin = await mk('admin@axel.dev', 'Admin', true);
 const people: Record<string, [string, 'Manager' | 'Member'][]> = {
   'central-stores': [[await mk('manager@cs.dev', 'Chetan Manager'), 'Manager'], [await mk('member@cs.dev', 'Meera Member'), 'Member']],
   'service-centre': [[await mk('manager@sc.dev', 'Priya Manager'), 'Manager'], [await mk('member@sc.dev', 'Sahil Member'), 'Member']],
