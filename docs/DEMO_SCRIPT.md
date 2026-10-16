@@ -2,8 +2,8 @@
 
 ## Before you go on stage
 
-1. `.\restore.ps1` (clean demo data), then `.\start.ps1`.
-2. Browser window A (normal): log in as **Hub admin**.
+1. `.\restore.ps1` (clean demo data), then `.\otp-mode.ps1 live` (real WhatsApp code for the admin; it restarts Axel).
+2. Browser window A (normal): log in as **Hub admin**, type the code from WhatsApp. Log in once only: live mode allows 3 codes per 10 minutes.
 3. Browser window B (incognito): log in as **Distribution field member** (`field@dist.dev`), open Distribution, leave it on screen.
 4. Have `apps/api/test` results ready: run `pnpm test` once so the terminal shows all tests passing.
 5. Keep a screen recording of this script as a last resort.
@@ -95,3 +95,4 @@
 | What if stock is approved but never issued? | Reservations expire; stock is released and the request goes back for re-approval. |
 | Prove isolation. | `pnpm test:isolation`, plus 404 for any other unit's data and RLS forced on every table. |
 | Scope? | Exactly the 13 approved modules; depth over breadth. |
+| How does login work? | Password (bcrypt), then a one-time code through MiniMoth on WhatsApp with SMS fallback. Only then do we issue our JWT, which carries roles and allowed sites; the server still re-checks them on every request. |
