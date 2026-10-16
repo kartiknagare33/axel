@@ -4,6 +4,7 @@ import { withSite, UUID } from './db';
 import { TABLES, resolveEntity, toRecord } from './entities';
 import { AxelError, ah, notFound } from './errors';
 import { runTransition, describeTransitions } from './workflow';
+import { bus } from './blueprints';
 
 export const workflow = Router({ mergeParams: true });
 
@@ -26,6 +27,7 @@ workflow.post('/:entity/:id/transition', ah(async (req, res) => {
   }).parse(req.body);
   const s = req.site!;
   const r = await withSite(s.ctx, tx => runTransition(tx, { ...s.ctx, role: s.role }, s.compiled, s.name, entity, req.params.id, b));
+  if (!r.replay) bus.emit('record_changed', { siteId: s.siteId, entity });
   res.status(r.replay ? 200 : 201).json({
     replay: r.replay,
     record: present(req, entity, r.row),

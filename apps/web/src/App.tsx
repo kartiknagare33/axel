@@ -3,6 +3,7 @@ import { useSession } from './store/session';
 import Login from './pages/Login';
 import Hub from './pages/Hub';
 import SiteShell from './renderer/SiteShell';
+import Builder from './builder/Builder';
 
 export default function App() {
   const token = useSession(s => s.token);
@@ -10,6 +11,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={token ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/" element={token ? <Hub /> : <Navigate to="/login" replace />} />
+      <Route path="/builder/:siteId" element={token ? <Builder /> : <Navigate to="/login" replace />} />
       <Route path="/:slug/*" element={token ? <SiteShell /> : <Navigate to="/login" replace />} />
     </Routes>
   );

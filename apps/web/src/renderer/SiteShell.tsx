@@ -1,5 +1,6 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import { Link, Navigate, NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Link, Navigate, NavLink, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSchema, useSites, useSite, SiteCtx, type SiteSummary } from '../hooks';
 import { useSession } from '../store/session';
 import { errOf } from '../api';
@@ -43,11 +44,12 @@ function SiteSwitcher({ dark }: { dark?: boolean }) {
 function UserMenu({ dark }: { dark?: boolean }) {
   const user = useSession(s => s.user);
   const logout = useSession(s => s.logout);
-  const { schema } = useSite();
+  const { schema, siteId } = useSite();
   const muted = dark ? 'text-white/70 hover:text-white' : 'text-slate-500 hover:text-slate-900';
   return (
     <div className="flex items-center gap-3 text-sm">
       <Link to="/" className={muted}>Hub</Link>
+      {schema.role === 'Admin' && <Link to={`/builder/${siteId}`} className={muted}>Builder</Link>}
       <span>{user?.name}</span>
       <span className={`rounded-full px-2 py-0.5 text-xs ${dark ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>{schema.role}</span>
       <button onClick={logout} className={muted}>Log out</button>
@@ -137,8 +139,33 @@ const LAYOUTS: Record<string, (p: { children: ReactNode }) => JSX.Element> = {
   'queue-first': QueueFirstLayout,
 };
 
-function SiteBody({ site }: { site: SiteSummary }) {
+// Live updates: a publish or a record change on this site refreshes what is on screen.
+function useLive(siteId: string, enabled: boolean, onPublished: () => void) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const token = useSession.getState().token;
+    if (!enabled || !token) return;
+    const es = new EventSource(`/api/events?token=${encodeURIComponent(token)}`);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => { clearTimeout(timer); timer = setTimeout(() => qc.invalidateQueries({ predicate: q => q.queryKey[1] === siteId }), 300); };
+    es.addEventListener('site_published', (e: MessageEvent) => {
+      if (JSON.parse(e.data).siteId !== siteId) return;
+      qc.invalidateQueries({ predicate: q => q.queryKey[1] === siteId });
+      qc.invalidateQueries({ queryKey: ['sites'] });
+      onPublished();
+    });
+    es.addEventListener('record_changed', (e: MessageEvent) => { if (JSON.parse(e.data).siteId === siteId) refresh(); });
+    return () => { clearTimeout(timer); es.close(); };
+  }, [siteId, enabled]);
+}
+
+function SiteBody({ site, preview }: { site: SiteSummary; preview: string | null }) {
   const schema = useSchema(site.id);
+  const nav = useNavigate();
+  const switchSite = useSession(s => s.switchSite);
+  const [toast, setToast] = useState('');
+  useLive(site.id, !preview, () => { setToast('This site was just updated to a new version.'); setTimeout(() => setToast(''), 6000); });
+
   if (schema.isLoading) return <Skeleton label={site.name} color={site.theme?.primary} />;
   if (schema.error || !schema.data) return <div className="p-6"><Denial err={errOf(schema.error)} /></div>;
   const s = schema.data;
@@ -155,6 +182,13 @@ function SiteBody({ site }: { site: SiteSummary }) {
   return (
     <SiteCtx.Provider value={{ siteId: site.id, slug: site.slug, name: s.name, base, schema: s }}>
       <div style={style} className="min-h-screen bg-surface text-slate-800">
+        {preview && (
+          <div className="sticky top-0 z-50 flex items-center justify-between bg-amber-400 px-4 py-1.5 text-sm text-amber-950">
+            <span><b>Previewing draft</b> - read-only, using live data. Nothing here is saved.</span>
+            <button onClick={() => { switchSite(site.id, null); nav(base); }} className="rounded bg-amber-950 px-2 py-0.5 text-xs text-white">Exit preview</button>
+          </div>
+        )}
+        {toast && <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-slate-900 px-4 py-2 text-sm text-white shadow-lg">{toast}</div>}
         <Layout>
           <Routes>
             <Route index element={<Navigate to={base + home} replace />} />
@@ -170,16 +204,19 @@ function SiteBody({ site }: { site: SiteSummary }) {
 
 export default function SiteShell() {
   const { slug } = useParams();
+  const [params] = useSearchParams();
   const sites = useSites();
   const active = useSession(s => s.activeSiteId);
+  const storePreview = useSession(s => s.preview);
   const switchSite = useSession(s => s.switchSite);
   const site = sites.data?.find(s => s.slug === slug);
+  const wantPreview = params.get('preview') ?? (site && active === site.id ? storePreview : null);
 
-  useEffect(() => { if (site) switchSite(site.id); }, [site?.id, switchSite]);
+  useEffect(() => { if (site) switchSite(site.id, wantPreview); }, [site?.id, wantPreview, switchSite]);
 
   if (sites.isLoading) return <Skeleton label="Loading" />;
   if (!site) return <div className="p-6"><Denial err={{ message: 'Not found.' }} /><Link to="/" className="text-sm underline">Back to hub</Link></div>;
-  // Render nothing site-specific until the cache wipe for this site has happened.
-  if (active !== site.id) return <Skeleton label={site.name} color={site.theme?.primary} />;
-  return <SiteBody key={site.id} site={site} />;
+  // Render nothing site-specific until the cache wipe for this site (and version) has happened.
+  if (active !== site.id || storePreview !== wantPreview) return <Skeleton label={site.name} color={site.theme?.primary} />;
+  return <SiteBody key={`${site.id}:${wantPreview ?? 'live'}`} site={site} preview={wantPreview} />;
 }

@@ -3,6 +3,7 @@ import type { Blueprint, Diagnostic, Entity, Field, Role } from './types';
 import { ROLES } from './types';
 import { parse, evaluate, refs, ExprError, type Node } from './expr';
 import { REGISTRY } from './registry';
+import { portDiagnostics } from './ports';
 
 export const RANK: Record<Role, number> = { Public: 0, Member: 1, Manager: 2, Admin: 3 };
 export const atLeast = (r: Role, min: Role) => RANK[r] >= RANK[min];
@@ -100,6 +101,7 @@ export function diagnose(bp: Blueprint): Diagnostic[] {
     if (p.entity && !bp.entities[p.entity]) out.push({ code: 'PAGE_ENTITY', severity: 'error', message: `Page ${p.path} shows '${p.entity}', which is not in this site.` });
     for (const w of p.widgets ?? []) if (!bp.entities[w.entity]) out.push({ code: 'PAGE_ENTITY', severity: 'error', message: `Widget ${w.id} reads '${w.entity}', which is not in this site.` });
   }
+  out.push(...portDiagnostics(bp));
   if (!bp.laws.some(l => l.template === 'site_isolation'))
     out.push({ code: 'LAW_ISOLATION_MISSING', severity: 'error', message: 'The site isolation law is locked and cannot be removed.' });
   return out;

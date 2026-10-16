@@ -14,7 +14,10 @@ http.interceptors.response.use(r => r, e => {
   return Promise.reject(e);
 });
 
-const h = (siteId: string) => ({ headers: { 'X-Site-Id': siteId } });
+const h = (siteId: string) => {
+  const p = useSession.getState().preview;
+  return { headers: p ? { 'X-Site-Id': siteId, 'X-Preview-Version': p } : { 'X-Site-Id': siteId } };
+};
 
 // Discard any response that started before a site switch.
 async function guard<T>(p: () => Promise<T>): Promise<T> {

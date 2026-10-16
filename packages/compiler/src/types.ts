@@ -23,7 +23,7 @@ export interface Entity { label?: string; owner_module: string; fields: Field[] 
 
 export interface Transition {
   id: string; from: string; to: string; roles: Role[];
-  label?: string; guard?: string; actions?: string[];
+  label?: string; guard?: string; actions?: string[]; owner_module?: string;
 }
 export interface Workflow { initial: string; states: string[]; transitions: Transition[]; terminal: string[] }
 
@@ -38,7 +38,7 @@ export interface Page {
   path: string; title: string;
   view: 'table' | 'kanban' | 'queue' | 'dashboard' | 'form' | 'detail';
   entity?: string; groupBy?: string; columns?: string[];
-  filter?: Record<string, string>; widgets?: Widget[]; roles?: Role[];
+  filter?: Record<string, string>; widgets?: Widget[]; roles?: Role[]; owner_module?: string;
 }
 
 export type Layout = 'sidebar' | 'topbar' | 'kanban-first' | 'queue-first';
@@ -61,6 +61,7 @@ export interface Blueprint {
   roles: Role[];
   nav: { label: string; path: string }[];
   edges?: Edge[];
+  canvas?: { positions: Record<string, { x: number; y: number }> };
 }
 
 export interface Diagnostic {

@@ -2,3 +2,6 @@ export * from './types';
 export * from './expr';
 export * from './registry';
 export * from './compile';
+export * from './ports';
+export * from './modules';
+export * from './presets';

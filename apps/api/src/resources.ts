@@ -7,6 +7,7 @@ import { AxelError, ah, notFound } from './errors';
 import { requireRole } from './site';
 import { move } from './ledger';
 import { describeTransitions } from './workflow';
+import { bus } from './blueprints';
 
 export const resources = Router({ mergeParams: true });
 
@@ -85,6 +86,7 @@ resources.post('/:entity', ah(async (req, res) => {
     await audit(c, req, entity, r.id, 'create', null, body);
     return r;
   });
+  bus.emit('record_changed', { siteId: req.site!.siteId, entity });
   res.status(201).json(present(req, entity, row));
 }));
 

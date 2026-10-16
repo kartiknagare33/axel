@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { compile, canonicalJson, type Blueprint } from '@axel/compiler';
+import { compile, canonicalJson, PRESETS, type Blueprint } from '@axel/compiler';
 import { withSite, withUser } from './db';
 import { getPublished } from './blueprints';
 import { requireAuth, requireHubAdmin } from './auth';
@@ -29,10 +29,11 @@ sitesRouter.post('/', requireAuth, requireHubAdmin, ah(async (req, res) => {
     name: z.string().min(2).max(60),
     slug: z.string().regex(/^[a-z0-9][a-z0-9-]{1,40}$/),
     blueprint: z.any().optional(),
+    preset: z.enum(['inventory-starter', 'approval-chain', 'repair-shop']).optional(),
     reason: z.string().max(200).optional(),
   }).parse(req.body);
   const siteId = randomUUID();
-  const bp: Blueprint = { ...(b.blueprint ?? starterBlueprint()), siteId, slug: b.slug, name: b.name };
+  const bp: Blueprint = { ...(b.blueprint ?? (b.preset ? PRESETS[b.preset].build() : starterBlueprint())), siteId, slug: b.slug, name: b.name };
   const compiled = compile(bp);
   if (!compiled.ok) throw new AxelError('VALIDATION_FAILED', 422, 'The blueprint has problems.', { diagnostics: compiled.diagnostics });
 
