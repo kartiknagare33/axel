@@ -14,82 +14,131 @@ Most platforms in this space let you *build* a site. Axel's focus is the part th
 
 ## What is new here
 
-We studied the tools named in the brief and real multi-tenant projects. They fail at the same moments: turning what a unit already does into a system, changing a live system safely, rolling back without losing data, and proving tenants are isolated. Each item below answers one of those failures. Every one is live in the app and covered by an automated test.
+Most platforms help you *build* a site. Axel focuses on what they leave to luck: **deriving** the site from what a unit already does, and **proving** every change is safe before it goes live.
+
+| # | Novelty | In one line | Try it |
+|---|---|---|---|
+| 1 | Sheet Inferencer | Upload a unit's spreadsheet, get a working site with every guess explained | Hub, + From a spreadsheet |
+| 2 | Laws + Release Gate | Rules in plain sentences, proven by a random walk before publish | Builder, Run gate |
+| 3 | Replay Report | A change is tested against the last 50 real requests | Builder, Impact |
+| 4 | Data-preserving rollback | Roll back with a plan for records created since | Builder, Versions |
+| 5 | Proof-carrying releases | Every deployment stores why it was allowed | Builder, Versions |
+| 6 | Reservation ledger | Stock reserved, committed, expired; proven under 50 concurrent approvals | Hub, Run chaos |
+| 7 | Live isolation proof | Tenant isolation checked live from PostgreSQL's own catalog | Hub, Isolation Ledger |
+| 8 | Typed-port builder | Wrong wiring is impossible; one compiler in browser and server | Builder canvas |
+| 9 | Explained denials | Every refusal says why and who decided | Anywhere |
+| 10 | Zero lock-in | Export Blueprint, docs, OpenAPI, data and history as a zip | Builder, Export |
 
 ### 1. Sheet Inferencer: the site is derived, not designed
 
-**Problem.** Every builder starts from a blank canvas, so a process owner still needs someone technical to translate their spreadsheet into a system.
-
-**What Axel does.** Upload the register the unit already keeps. Axel decides which sheet is the stock list and which is the request register. It infers field types, choice lists (from dropdowns or repeated values), money columns, and calculated fields: `=D2*I2` becomes `qty * unit_price`. It turns the **Status column into a workflow**: "Sanctioned" is read as approved, "Repairing" as in repair, "Issued" as assigned. From the columns present it enables modules (an "Approved by" column enables Approval, "Serial No" enables PCB Repair, "Returned On" enables Returns), proposes Laws, picks pages and a layout, and imports the rows with opening stock through the ledger.
-
-**What makes it trustworthy.** Every inference shows a **confidence and a plain-English reason**, for example "'Total' is calculated as =D2*I2 in 100% of rows; mapped to qty * unit_price". Low-confidence guesses are highlighted. The rules are deterministic: no AI service, no internet, the same file always gives the same site.
-
-**See it.** Hub, **+ From a spreadsheet**, `demo/registers/Workshop_Tools.xlsx`. Test: `test:infer`.
+- **Gap:** every builder starts from a blank canvas, so a process owner still needs someone technical.
+- **What it does:**
+  - Finds the stock list and the request register in the workbook.
+  - Infers field types, money columns and choice lists (from dropdowns or repeated values).
+  - Turns sheet formulas into calculated fields: `=D2*I2` becomes `qty * unit_price`.
+  - Turns the **Status column into a workflow**: "Sanctioned" is read as approved, "Repairing" as in repair, "Issued" as assigned.
+  - Enables modules from the columns it finds: "Approved by" enables Approval, "Serial No" enables PCB Repair, "Returned On" enables Returns.
+  - Proposes Laws, pages and a layout, then imports the rows (opening stock through the ledger).
+- **Why trust it:**
+  - Every guess shows a **confidence %** and a **plain-English reason**.
+  - Low-confidence guesses are highlighted as "check this".
+  - Rule-based and deterministic: no AI service, no internet, same file gives the same site.
+- **Try it:** Hub, **+ From a spreadsheet**, `demo/registers/Workshop_Tools.xlsx`. **Test:** `test:infer`
 
 ### 2. Laws and the Release Gate: nothing publishes without evidence
 
-**Problem.** Low-code tools publish whatever the admin clicks. Mistakes are found by users.
+- **Gap:** low-code tools publish whatever the admin clicks; users find the mistakes.
+- **Laws are rules in plain sentences**, for example:
+  - "Members never see Unit price"
+  - "Every Assignment comes from a request that was approved"
+  - "Reserved stock never exceeds on-hand stock"
+  - "This site never reads another site's data"
+- **The Release Gate runs before every publish:**
+  - **Compile:** zero errors allowed.
+  - **Static check:** Laws checked against the Blueprint, for example a calculated field that would leak a hidden price.
+  - **Random walk:** hundreds to thousands of actions as Members, Managers and Admins on **real data**, in a transaction that is always rolled back; every Law checked after every step.
+- **If a Law breaks:** publish is blocked and the builder shows a **counter-example** (the exact steps that broke it) plus a **seed** to replay it.
+- **Try it:** add a "Fast-track" step from submitted to assigned, then **Run gate**. You get "Law l2 broken at step 37". **Test:** `test:gate`
 
-**What Axel does.** Each site declares **Laws** as sentences: "Members never see Unit price", "Every Assignment comes from a request that was approved", "Reserved stock never exceeds on-hand stock", "This site never reads another site's data". Before any draft goes live, the **Release Gate**:
+### 3. Replay Report: tested against what actually happened
 
-1. compiles it (zero errors allowed);
-2. checks Laws against the Blueprint itself, for example a *calculated field that would leak a hidden price*;
-3. runs a **seeded random walk**: hundreds to thousands of actions as Members, Managers and Admins on the site's **real data**, inside a transaction that is always rolled back, and checks every Law after every step.
-
-If a Law breaks, publish is blocked and the builder shows a **counter-example**: the exact steps that broke it, plus the seed to replay them. Laws are property-based tests that a non-developer can read and add.
-
-**See it.** Builder, Workflow tab: add a "Fast-track" step from submitted to assigned. **Run gate**: "Law l2 broken at step 37: Assignment ... was created for a request that never became 'approved'". Test: `test:gate`.
-
-### 3. Replay Report: changes are tested against what actually happened
-
-**Problem.** A tightened rule looks harmless until it blocks half of last month's real work.
-
-**What Axel does.** Every state change is event-sourced. Before publishing, Axel takes the last 50 real requests and **replays their recorded history** (same steps, same roles) through both the live version and the draft, side by side, in a rolled-back transaction. It reports exactly which requests would now go differently and where: "3 of 50: submitted > approved would be blocked by a rule (today: allowed)".
-
-**See it.** Service Centre builder, Workflow tab: give Approve the rule `qty <= 1`, then **Impact**, **Run replay and impact**. Test: `test:replay`.
+- **Gap:** a "small" rule change can silently block real work.
+- **What it does:**
+  - Takes the last 50 real requests and their recorded history (same steps, same roles).
+  - Replays them through the **live version** and the **draft**, side by side, in a rolled-back transaction.
+  - Lists every request that would now go differently, and at which step.
+- **Example output:** "3 of 50: submitted > approved would be blocked by a rule (today: allowed)".
+- **Try it:** Service Centre builder, Workflow tab, give Approve the rule `qty <= 1`, then **Impact**. **Test:** `test:replay`
 
 ### 4. Impact Report and data-preserving rollback
 
-**Problem.** Platforms roll back configuration but orphan or lose the data created since.
-
-**What Axel does.** Every change is classed as additive, behavioural or destructive, with record counts from live data. If a version removes a state that still holds records, publishing **or rolling back** requires a plan per state: keep those records read-only, or move them to another state. Moves are written to the audit trail. Fields that disappear are hidden, never dropped. Rollback runs a short gate on the older version too.
-
-**See it.** Distribution: enable Returns, return one request, then roll back. The impact list asks what to do with the returned request; choose "Move to closed". Test: `test:replay`.
+- **Gap:** platforms roll back configuration but lose or orphan the data created since.
+- **What it does:**
+  - Classes every change as **additive**, **behavioural** or **destructive**, with live record counts.
+  - If a removed state still holds records, publish **or rollback** needs a plan per state:
+    - keep those records read-only, or
+    - move them to another state (written to the audit trail).
+  - Removed fields are hidden, never dropped.
+  - Rollbacks run a short Release Gate on the older version too.
+- **Try it:** Distribution: enable Returns, return one request, roll back, and choose "Move to closed". **Test:** `test:replay`
 
 ### 5. Proof-carrying releases
 
-Every deployment stores a **proof record**: the Blueprint's content hash, the gate's steps, seed and result, the replay summary and whether it was reviewed, the plans chosen and the list of changes. The deploy history is an audit trail of *why* each version was allowed to go live, not just *when*.
+- Every deployment stores a **proof record**:
+  - Blueprint content hash
+  - gate steps, seed and result
+  - replay summary and whether it was reviewed
+  - plans chosen and the list of changes
+- The deploy history records **why** each version was allowed live, not just **when**.
 
-### 6. A reservation ledger with expiry, proven under concurrency
+### 6. Reservation ledger with expiry, proven under concurrency
 
-**Problem.** Typical approval systems decrement a counter, so two managers approving at once double-spend stock, and approved-but-never-issued stock is locked forever.
-
-**What Axel does.** Stock is an **append-only ledger** (receive, adjust, reserve, commit, release, return). Approve reserves; assign or repair commits; return gives back. Every operation takes row locks on the request and the item and carries an idempotency key. A double-click is a no-op, and a stale screen gets "this record changed since you opened it". **Reservations expire**: unclaimed stock is released and the request goes back for re-approval, visible on its timeline.
-
-**See it.** Hub, **Run chaos**: 50 concurrent approvals against an item with 10 in stock. Exactly 10 succeed, 40 are refused, and the stock recomputed from the ledger matches the item. Test: `test:workflow`.
+- **Gap:** counters get double-spent when two managers approve at once, and approved-but-unused stock stays locked forever.
+- **What it does:**
+  - Stock is an **append-only ledger**: receive, adjust, reserve, commit, release, return.
+  - Approve **reserves**, assign or repair **commits**, return **gives back**.
+  - Row locks on request and item, plus **idempotency keys**: a double-click is a no-op.
+  - Stale screens are refused: "this record changed since you opened it".
+  - **Reservations expire**: stock is released and the request goes back for re-approval.
+- **Proof:** **Run chaos** fires 50 concurrent approvals at 10 units. **Exactly 10 succeed**, 40 are refused, and the ledger matches. **Test:** `test:workflow`
 
 ### 7. Isolation you can watch being proven
 
-**Problem.** Row-level security is easy to switch on and easy to leak around: forgotten FORCE, owner bypass, pooled connections carrying the wrong tenant, foreign keys that reveal whether another tenant's row exists.
+- **Gap:** row-level security leaks through forgotten FORCE, owner bypass, pooled connections, and foreign keys that reveal other tenants' rows.
+- **What Axel does:**
+  - FORCE RLS on every business table.
+  - API database role **cannot bypass RLS** and **owns no tables**.
+  - Site context is per transaction: no context means **zero rows**.
+  - Composite `(site_id, id)` foreign keys: another unit's id looks exactly like a missing one.
+  - Other units' data returns **404, never 403**.
+  - The browser wipes its cache on every switch and drops late responses.
+- **Try it:** Hub, **Isolation Ledger** (read live from PostgreSQL), then **Run live isolation check**. **Tests:** `test:isolation`, `test:stage`
 
-**What Axel does.** It uses FORCE RLS on every business table, an API role that cannot bypass RLS and owns no tables, transaction-local site context (no context means zero rows), and composite `(site_id, id)` foreign keys, so another unit's id is indistinguishable from a missing one. Reads of other units return 404, never 403. The client wipes its cache on every switch and discards late responses.
+### 8. Typed-port builder, one compiler everywhere
 
-**See it.** Hub, **Isolation Ledger**: read live from PostgreSQL's own catalog. Then **Run live isolation check**: every unit reads every other unit, a cross-unit write and a cross-unit reference are attempted, and 30 parallel pooled requests run. Tests: `test:isolation` and `test:stage`.
-
-### 8. A typed-port builder with the same compiler in browser and server
-
-Modules are nodes with **typed ports**: Approval needs a RequestStream, and Material Assignment needs an ApprovedStream and a StockLedger. A wrong connection or a missing dependency is a plain-English problem ("Approval requires Request") with a one-click fix. Adding a module **changes the site**: Return Management adds a Return step, a Returns page and a stock action. The browser and the API run the **same compiler package**, so what the canvas accepts is exactly what the server accepts. Publishing is live: open windows of the site re-render with no reload and no restart.
+- Modules are nodes with **typed ports**: Approval needs a RequestStream; Material Assignment needs an ApprovedStream and a StockLedger.
+- Wrong wiring or missing modules become plain-English problems ("Approval requires Request") with **one-click fixes**.
+- Adding a module **changes the site**: Return Management adds a Return step, a Returns page and a stock action.
+- Browser and API run the **same compiler**, so what the canvas accepts is exactly what the server accepts.
+- Publishing is **live**: open windows re-render with no reload and no restart.
 
 ### 9. Explained denials everywhere
 
-Refusals say why and who decided: "Only Manager, Admin can approve in Service Centre (transition t2)", "Approve blocked: available stock for SC-104 is 3, rule 'stock.available(item_id) >= qty' is not met", "You can't see Unit price in Central Stores (cost confidential). Ask a Manager." A Member's Excel export carries an About sheet listing the columns hidden from them.
+- "Only Manager, Admin can approve in Service Centre (transition t2)"
+- "Approve blocked: available stock for SC-104 is 3, rule 'stock.available(item_id) >= qty' is not met"
+- "You can't see Unit price in Central Stores (cost confidential). Ask a Manager."
+- A Member's Excel export includes an **About** sheet listing the columns hidden from them.
 
 ### 10. Zero lock-in
 
-**Export** gives a zip with the Blueprint, a generated plain-language README for the unit (**Explain**), OpenAPI 3.1, all data as Excel, and the deploy history with proofs.
+- **Export** downloads a zip with:
+  - `blueprint.json`
+  - a generated plain-language `README.md` (**Explain**)
+  - `openapi.json` (OpenAPI 3.1)
+  - `data.xlsx` with all records
+  - `deployments.json` with every proof record
 
 ---
-
 ## How Axel compares
 
 | Capability | Retool / Appsmith | Odoo / Zoho | Wix / Webflow | Axel |
