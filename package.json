@@ -1,0 +1,13 @@
+{
+  "name": "axel",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "db:up": "docker compose up -d db",
+    "migrate": "pnpm --filter @axel/api migrate",
+    "seed": "pnpm --filter @axel/api seed",
+    "dev:api": "pnpm --filter @axel/api dev",
+    "dev:web": "pnpm --filter @axel/web dev",
+    "test:isolation": "pnpm --filter @axel/api test:isolation"
+  }
+}

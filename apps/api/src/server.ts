@@ -1,0 +1,27 @@
+import express from 'express';
+import { authRouter, requireAuth, memberships } from './auth';
+import { sitesRouter } from './sites';
+import { siteScope } from './site';
+import { resources } from './resources';
+import { analytics } from './analytics';
+import { errorHandler, ah } from './errors';
+import { pool } from './db';
+import { startPublishListener } from './blueprints';
+
+const app = express();
+app.disable('x-powered-by');
+app.use(express.json({ limit: '2mb' }));
+
+app.get('/api/health', ah(async (_req, res) => { await pool.query('SELECT 1'); res.json({ ok: true }); }));
+app.use('/api/auth', authRouter);
+app.get('/api/me', requireAuth, ah(async (req, res) => {
+  const u = (await pool.query('SELECT id, email, name, is_hub_admin FROM users WHERE id = $1', [req.user!.id])).rows[0];
+  res.json({ user: { id: u.id, email: u.email, name: u.name, hubAdmin: u.is_hub_admin }, memberships: await memberships(u.id) });
+}));
+app.use('/api/sites', sitesRouter);
+app.use('/api/:siteId', requireAuth, siteScope, analytics, resources);
+app.use(errorHandler);
+
+await startPublishListener();
+const port = Number(process.env.PORT ?? 4000);
+app.listen(port, () => console.log(`Axel API on :${port}`));

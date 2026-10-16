@@ -1,0 +1,27 @@
+{
+  "name": "@axel/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/server.ts",
+    "migrate": "tsx --env-file=../../.env src/migrate.ts",
+    "seed": "tsx --env-file=../../.env seed/seed.ts",
+    "test:isolation": "tsx --env-file=../../.env --test test/isolation.test.ts"
+  },
+  "dependencies": {
+    "@axel/compiler": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Site theme tokens arrive as CSS variables set by SiteShell */
+@theme inline {
+  --color-primary: var(--primary, #4f46e5);
+  --color-surface: var(--surface, #f8fafc);
+  --radius-site: var(--radius, 8px);
+}
+
+body { margin: 0; font-family: Inter, system-ui, sans-serif; }
