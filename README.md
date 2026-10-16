@@ -147,6 +147,16 @@ Most platforms help you *build* a site. Axel focuses on what they leave to luck:
 - The OTP challenge is signed with a different key from the session, so it can never be used as a login token.
 - Keys live only in `.env` (`MINIMOTH_API_KEY`, never committed). `OTP_REQUIRED=all | admins | off`. With a `mm_test_` key nothing is sent and the code is `000000`.
 
+## Repair, refurbishment and diagnostics
+
+Service units get the depth a repair business runs on, built as general Blueprint features any unit can switch on:
+
+- **Check stage with a rework loop:** received, approved, in repair, **testing**, closed, returned. A failed test sends the job back for rework; "beyond economical repair" ends it. A Law (`via_state`) guarantees nothing closes without passing testing, and the Release Gate blocks any shortcut.
+- **Diagnosis record:** fault category, board model, root cause, parts replaced, firmware version, technician, bench hours, test result, rework rounds, outcome and warranty. Test result, reworks and outcome are filled in by the workflow itself.
+- **Repeat-failure and warranty warning** when a serial number comes back, and a **board passport** (visits, reworks, last outcome, warranty, parts) on the board history.
+- **Repair analytics:** boards in repair, waiting for testing, first-time test passes, average bench hours, faults by category, outcomes. Dashboard widgets can now filter (`where`).
+- **Public tracking:** any unit can set `publicTracking`; customers open `/track`, enter a serial number and see only the stage and dates, never names, prices or notes.
+
 ## How Axel compares
 
 | Capability | Retool / Appsmith | Odoo / Zoho | Wix / Webflow | Axel |

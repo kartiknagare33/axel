@@ -76,7 +76,14 @@ for (const bp of blueprints) {
       for (let i = 0; i < 10; i++) {
         const it = items[i % (items.length - 1)];
         const data: Record<string, unknown> = { unit_price: it.price };
-        if (bp.slug === 'service-centre') Object.assign(data, { serial_no: `PCB-${24000 + i}`, fault: ['No power', 'Display dead', 'Relay chatter', 'Overheating'][i % 4], priority: ['low', 'normal', 'urgent'][i % 3] });
+        if (bp.slug === 'service-centre') Object.assign(data, {
+          serial_no: `PCB-${24000 + (i === 8 ? 7 : i)}`,
+          fault: ['No power', 'Display dead', 'Relay chatter', 'Overheating'][i % 4],
+          fault_category: ['No power', 'Component failure', 'Solder joint', 'Short circuit', 'Firmware'][i % 5],
+          board_model: ['MCB-200 controller', 'PSU-48V', 'VFD drive card', 'HMI panel board'][i % 4],
+          customer: ['Acme Pumps', 'Bharat Textiles', 'Metro Elevators', 'Sunrise Plastics'][i % 4],
+          priority: ['low', 'normal', 'urgent'][i % 3],
+        });
         if (bp.slug === 'distribution') Object.assign(data, { site_location: ['Ward 4', 'Sector 12', 'Plant gate', 'Substation B'][i % 4] });
         const state = i % 2 ? 'submitted' : 'draft';
         const r = (await tx.query(
@@ -92,5 +99,24 @@ for (const bp of blueprints) {
 }
 const managerIds = Object.fromEntries(Object.entries(people).map(([slug, ps]) => [slug, ps.find(p => p[1] === 'Manager')![0]]));
 await runLifecycle(blueprints, SITE_IDS, managerIds);
+// Service Centre: fill in diagnosis details on the repair logs the lifecycle opened.
+await withSite({ siteId: SITE_IDS['service-centre'], userId: admin, role: 'Admin' }, async tx => {
+  const reps = (await tx.query('SELECT id FROM repairs ORDER BY opened_at')).rows;
+  for (const [k, r] of reps.entries())
+    await tx.query('UPDATE repairs SET diagnosis = $2, data = data || $3 WHERE id = $1', [r.id,
+      ['Dry solder joint on regulator', 'Failed MOSFET on output stage', 'Corroded trace near connector', 'Corrupt firmware image'][k % 4],
+      { root_cause: ['Thermal cycling', 'Overcurrent event', 'Moisture ingress', 'Power loss during update'][k % 4],
+        parts_replaced: ['U3 regulator', 'Q2 MOSFET, R14', 'Jumper wire on trace 7', 'None (reflashed)'][k % 4],
+        firmware_version: `v2.${k + 1}.0`, technician: ['Ravi', 'Neha', 'Imran'][k % 3], bench_hours: 1.5 + (k % 4) }]);
+  // Make one finished repair belong to the board that comes back (PCB-24007), so the repeat-failure demo is reliable.
+  const done = (await tx.query(`SELECT request_id FROM repairs WHERE state = 'closed' ORDER BY closed_at LIMIT 1`)).rows[0];
+  if (done) {
+    await tx.query(`UPDATE repairs SET serial_no = 'PCB-24007' WHERE request_id = $1`, [done.request_id]);
+    const core = (await tx.query(`SELECT 1 FROM information_schema.columns WHERE table_name = 'requests' AND column_name = 'serial_no'`)).rowCount;
+    await tx.query(core
+      ? `UPDATE requests SET serial_no = 'PCB-24007' WHERE id = $1`
+      : `UPDATE requests SET data = jsonb_set(data, '{serial_no}', '"PCB-24007"') WHERE id = $1`, [done.request_id]);
+  }
+});
 await pool.end();
 console.log('done. login: admin@axel.dev / demo1234');

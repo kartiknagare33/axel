@@ -66,9 +66,11 @@ const ADD: Record<string, (bp: Blueprint) => void> = {
     if (!wf || !req || !wf.states.includes('approved')) return;
     addField(req, { key: 'serial_no', type: 'text', label: 'Board serial', unique: true, owner_module: 'pcb-repair', reason: 'board identity' });
     addField(req, { key: 'fault', type: 'text', label: 'Fault reported', owner_module: 'pcb-repair' });
-    addState(wf, 'in_repair'); addState(wf, 'closed', true); unterminal(wf, 'approved');
+    addState(wf, 'in_repair'); addState(wf, 'testing'); addState(wf, 'closed', true); unterminal(wf, 'approved');
     addT(wf, { from: 'approved', to: 'in_repair', label: 'Start repair', roles: MG, actions: ['stock.commit(item_id, qty)', 'repair.open()'], owner_module: 'pcb-repair' });
-    addT(wf, { from: 'in_repair', to: 'closed', label: 'Close', roles: MG, actions: ['repair.close()'], owner_module: 'pcb-repair' });
+    addT(wf, { from: 'in_repair', to: 'testing', label: 'Send to testing', roles: MG, owner_module: 'pcb-repair' });
+    addT(wf, { from: 'testing', to: 'closed', label: 'Pass test', roles: MG, actions: ["repair.test('pass')", 'repair.close()'], owner_module: 'pcb-repair' });
+    addT(wf, { from: 'testing', to: 'in_repair', label: 'Fail test - rework', roles: MG, actions: ["repair.test('fail')"], owner_module: 'pcb-repair' });
     bp.entities.repair ??= { owner_module: 'pcb-repair', label: 'Repair log', fields: [
       { key: 'request_id', type: 'relation', to: 'request', label: 'Request', required: true },
       { key: 'serial_no', type: 'text', label: 'Serial' },

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ShieldCheck } from 'lucide-react';
 import { http, errOf } from '../api';
 import { useSession } from '../store/session';
@@ -127,6 +127,7 @@ export default function Login() {
           <span>Reversible</span><span className="h-1 w-1 rounded-full bg-slate-300" />
           <span>PS 03 - Team Breaking Bytes</span>
         </div>
+        <div className="text-center"><Link to="/track" className="text-sm font-medium text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline">Track a repair without signing in</Link></div>
       </div>
     </div>
   );

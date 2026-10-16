@@ -12,6 +12,9 @@ import { Denial } from './fields';
 import { PageView } from './views';
 import { RecordDetail } from './RecordDetail';
 import { SerialTimeline } from './SerialTimeline';
+import { markDone } from '../help/progress';
+import { HelpButton } from '../help/HelpPanel';
+import { SiteHelp } from '../help/content';
 
 const initials = (s: string) => s.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
@@ -85,6 +88,7 @@ function UserMenu({ dark }: { dark?: boolean }) {
   const link = `inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${dark ? 'text-white/80 hover:bg-white/10 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`;
   return (
     <div className="flex items-center gap-1">
+      <HelpButton title="What can I do here?" dark={dark}><SiteHelp /></HelpButton>
       <Link to="/" className={link}><LayoutGrid className="h-4 w-4" />Hub</Link>
       {schema.role === 'Admin' && <Link to={`/builder/${siteId}`} className={link}><Layers className="h-4 w-4" />Builder</Link>}
       <div className={`ml-2 flex items-center gap-2.5 border-l pl-3 ${dark ? 'border-white/15' : 'border-slate-200'}`}>
@@ -249,6 +253,7 @@ function SiteBody({ site, preview }: { site: SiteSummary; preview: string | null
   const nav = useNavigate();
   const switchSite = useSession(s => s.switchSite);
   const [toast, setToast] = useState('');
+  useEffect(() => { markDone('openedUnit'); }, []);
   useLive(site.id, !preview, () => { setToast('This unit was just updated to a new version.'); setTimeout(() => setToast(''), 6000); });
 
   if (schema.isLoading) return <Skeleton label={site.name} color={site.theme?.primary} />;

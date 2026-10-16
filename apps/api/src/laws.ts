@@ -49,6 +49,16 @@ async function checkLaw(c: Tx, law: LawCheck, raw: any): Promise<string | null> 
                               AND e.kind = 'transition' AND e.to_state = $1) LIMIT 1`, [raw.state])).rows[0];
       return r ? `Assignment ${String(r.id).slice(0, 8)} was created for a request that never became '${raw.state}' (it is now '${r.state}').` : null;
     }
+    case 'via_state': {
+      if (raw?.entity !== 'request') return null;
+      const r = (await c.query(
+        `SELECT e.record_id FROM audit_events e
+          WHERE e.entity = 'request' AND e.kind = 'transition' AND e.to_state = $1
+            AND NOT EXISTS (SELECT 1 FROM audit_events v WHERE v.entity = 'request' AND v.record_id = e.record_id
+                              AND v.kind = 'transition' AND v.to_state = $2 AND v.at <= e.at)
+          LIMIT 1`, [raw.state, raw.via])).rows[0];
+      return r ? `Request ${String(r.record_id).slice(0, 8)} reached '${raw.state}' without passing '${raw.via}'.` : null;
+    }
     case 'site_isolation': {
       const r = (await c.query(
         `SELECT relname FROM pg_class WHERE relname = ANY($1) AND relkind = 'r' AND NOT (relrowsecurity AND relforcerowsecurity) LIMIT 1`,

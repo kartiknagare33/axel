@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Hub from './pages/Hub';
 import SiteShell from './renderer/SiteShell';
 import Builder from './builder/Builder';
+import Track from './pages/Track';
 import IsolationLedger from './pages/IsolationLedger';
 
 export default function App() {
@@ -13,6 +14,8 @@ export default function App() {
       <Route path="/login" element={token ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/" element={token ? <Hub /> : <Navigate to="/login" replace />} />
       <Route path="/hub/ledger" element={token ? <IsolationLedger /> : <Navigate to="/login" replace />} />
+      <Route path="/track" element={<Track />} />
+      <Route path="/track/:slug" element={<Track />} />
       <Route path="/builder/:siteId" element={token ? <Builder /> : <Navigate to="/login" replace />} />
       <Route path="/:slug/*" element={token ? <SiteShell /> : <Navigate to="/login" replace />} />
     </Routes>

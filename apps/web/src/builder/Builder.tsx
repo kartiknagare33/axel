@@ -16,6 +16,10 @@ import { WorkflowPanel } from './WorkflowPanel';
 import { ImpactPanel } from './ImpactPanel';
 import { ReleasesPanel } from './ReleasesPanel';
 import { PeoplePanel } from './PeoplePanel';
+import { HelpButton } from '../help/HelpPanel';
+import { BuilderHelp } from '../help/content';
+import { TAB_HELP } from '../help/glossary';
+import { markDone } from '../help/progress';
 
 const CORE = new Set(['auth', 'users', 'dashboard']);
 const PORT_COLOR: Record<string, string> = {
@@ -166,6 +170,7 @@ function BuilderInner() {
     } catch (e) { setLoadErr(errOf(e).message); }
   }, [siteId, H]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { markDone('openedBuilder'); }, []);
 
   const diags: Diagnostic[] = useMemo(() => (bp ? compile(bp).diagnostics : []), [bp]);
   const errors = diags.filter(d => d.severity === 'error');
@@ -239,6 +244,7 @@ function BuilderInner() {
     try {
       const r = await http.post(`/sites/${siteId}/versions/${id}/gate`, { steps }, H);
       setGate(r.data);
+      markDone('ranGate');
       return r.data;
     } catch (e) { setMsg({ kind: 'err', text: errOf(e).message }); return null; }
     finally { setGating(false); }
@@ -306,6 +312,7 @@ function BuilderInner() {
         replay: rep ? { sampled: rep.sampled, identical: rep.identical, divergent: rep.divergent?.length ?? 0, reviewed } : undefined,
       }, H);
       setPlans({});
+      markDone('published');
       setMsg({ kind: 'ok', text: `Published. ${r.data.changes.length ? r.data.changes.join(', ') + '.' : ''} Open windows of this site update by themselves.` });
       setVersionsKey(k => k + 1);
       await load();
@@ -360,6 +367,7 @@ function BuilderInner() {
       <header className="flex items-center gap-3 border-b bg-white px-4 py-2">
         <Link to="/" className="text-sm text-slate-500 hover:text-slate-900">&lt; Hub</Link>
         <div className="font-semibold">Builder - {site.name}</div>
+        <HelpButton title="Using the Builder"><BuilderHelp /></HelpButton>
         <span className={`rounded-full px-2 py-0.5 text-xs ${dirty ? 'bg-amber-100 text-amber-800' : draft ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'}`}>
           {dirty ? 'Unsaved changes' : draft ? 'Draft saved' : 'Matches live'}
         </span>
@@ -436,7 +444,7 @@ function BuilderInner() {
         <aside className="flex min-h-0 flex-col border-l bg-white">
           <nav className="flex flex-wrap border-b text-xs">
             {([['problems', `Problems${errors.length ? ` (${errors.length})` : ''}`], ['module', 'Module'], ['workflow', 'Workflow'], ['laws', 'Laws'], ['gate', 'Gate'], ['impact', 'Impact'], ['theme', 'Theme'], ['json', 'JSON'], ['versions', 'Versions'], ['people', 'People']] as const).map(([k, label]) => (
-              <button key={k} onClick={() => setTab(k)} className={`flex-1 border-b-2 px-2 py-2 ${tab === k ? 'border-slate-900 font-medium' : 'border-transparent text-slate-500'}`}>{label}</button>
+              <button key={k} onClick={() => setTab(k)} title={TAB_HELP[k]} className={`flex-1 border-b-2 px-2 py-2 ${tab === k ? 'border-slate-900 font-medium' : 'border-transparent text-slate-500'}`}>{label}</button>
             ))}
           </nav>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">

@@ -36,6 +36,8 @@ const TONE: Record<string, [string, string]> = {
   closed: ['bg-slate-100 text-slate-700 ring-slate-600/20', 'bg-slate-500'],
   returned: ['bg-teal-50 text-teal-700 ring-teal-600/20', 'bg-teal-500'],
   rejected: ['bg-rose-50 text-rose-700 ring-rose-600/20', 'bg-rose-500'],
+  testing: ['bg-indigo-50 text-indigo-700 ring-indigo-600/20', 'bg-indigo-500'],
+  scrapped: ['bg-zinc-100 text-zinc-600 ring-zinc-500/20', 'bg-zinc-500'],
 };
 export const stateDot = (s: unknown) => TONE[String(s)]?.[1] ?? 'bg-primary';
 
@@ -138,12 +140,13 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   );
 }
 
-export function EmptyState({ title, hint }: { title: string; hint?: string }) {
+export function EmptyState({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400"><Inbox className="h-6 w-6" /></div>
       <div className="mt-3 text-sm font-medium text-slate-700">{title}</div>
       {hint && <div className="mt-1 max-w-sm text-sm text-slate-500">{hint}</div>}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }

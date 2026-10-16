@@ -30,7 +30,9 @@ export async function runLifecycle(bps: Blueprint[], siteIds: Record<string, str
       (await tx.query(`SELECT id FROM requests WHERE state = 'submitted' ORDER BY created_at, id`)).rows.map(r => r.id));
     const path = happyPath(wf);
     for (const [i, id] of submitted.entries()) {
-      const steps = i === submitted.length - 1 && wf.transitions.some(t => t.to === 'rejected') ? ['rejected'] : path.slice(0, i % (path.length + 1));
+      const closedAt = path.indexOf('closed');
+      const depth = [0, 1, 2, closedAt >= 0 ? closedAt + 1 : path.length][i % 4] ?? 0;
+      const steps = i === submitted.length - 1 && wf.transitions.some(t => t.to === 'rejected') ? ['rejected'] : path.slice(0, Math.min(depth, path.length));
       for (const to of steps) {
         try {
           await withSite(ctx, tx => runTransition(tx, ctx, compiled, bp.name, 'request', id, {

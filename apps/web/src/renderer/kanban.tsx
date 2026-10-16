@@ -5,7 +5,8 @@ import { GripVertical, Plus } from 'lucide-react';
 import type { Page } from '@axel/compiler';
 import { site, errOf, type ApiErr } from '../api';
 import { useList, useSite, RANK } from '../hooks';
-import { Cell, columnFields, Denial, labelOf, btn, PageHeader, stateDot, Skeleton } from './fields';
+import { Cell, columnFields, Denial, labelOf, btn, PageHeader, stateDot, Skeleton, EmptyState, card } from './fields';
+import { markDone } from '../help/progress';
 import { RecordForm } from './RecordForm';
 import { ExcelBar } from './excel';
 
@@ -35,7 +36,7 @@ export function KanbanBoard({ page }: { page: Page }) {
       const payload = to === 'assigned' ? { assigned_to: window.prompt('Assign to (name)') ?? '' } : undefined;
       return site.post(siteId, `/${entity}/${row.id}/transition`, { to, idempotencyKey: crypto.randomUUID(), ifVersion: row.row_version, payload });
     },
-    onSuccess: () => { setErr(null); qc.invalidateQueries({ predicate: x => x.queryKey[1] === siteId }); },
+    onSuccess: () => { setErr(null); markDone('movedRequest'); qc.invalidateQueries({ predicate: x => x.queryKey[1] === siteId }); },
     onError: e => setErr(errOf(e)),
   });
 
@@ -61,6 +62,13 @@ export function KanbanBoard({ page }: { page: Page }) {
       {err && <Denial err={err} />}
       {q.isLoading && <Skeleton />}
       {q.error && <Denial err={errOf(q.error)} />}
+      {!q.isLoading && !q.error && !rows.length && (
+        <div className={card}>
+          <EmptyState title={`No ${ent.label} records yet`}
+            hint={canNew ? 'Create the first one. It starts in the first column and moves right as it goes through the steps.' : 'Records appear here once someone with the right role creates them.'}
+            action={canNew ? <button onClick={() => setCreating(true)} className={btn}><Plus className="h-4 w-4" />Create the first one</button> : undefined} />
+        </div>
+      )}
       {!q.isLoading && !q.error && (
         <div className="-mx-6 overflow-x-auto px-6 pb-4">
           <div className="flex min-w-max gap-4">

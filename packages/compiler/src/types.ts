@@ -31,7 +31,7 @@ export interface Law { id: string; template: string; locked?: boolean; [k: strin
 
 export interface Widget {
   id: string; type: 'bar' | 'line' | 'pie' | 'stat'; title?: string;
-  entity: string; measure: 'count' | 'sum' | 'avg'; field?: string; by?: string;
+  entity: string; measure: 'count' | 'sum' | 'avg'; field?: string; by?: string; where?: Record<string, string>;
 }
 
 export interface Page {
@@ -62,6 +62,7 @@ export interface Blueprint {
   nav: { label: string; path: string }[];
   edges?: Edge[];
   canvas?: { positions: Record<string, { x: number; y: number }> };
+  publicTracking?: { entity: string; field: string };
 }
 
 export interface Diagnostic {

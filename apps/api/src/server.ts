@@ -17,6 +17,7 @@ import { membersRouter } from './members';
 import { exportRouter } from './export';
 import { isolationRouter } from './isolation';
 import { timeline } from './timeline';
+import { publicRouter } from './public';
 import { errorHandler, ah } from './errors';
 import { pool } from './db';
 import { startPublishListener } from './blueprints';
@@ -36,6 +37,7 @@ app.get('/api/me', requireAuth, ah(async (req, res) => {
 app.use('/api/sites', sitesRouter);
 app.use('/api/sites', inferRouter);
 app.use('/api/sites/:siteId', requireAuth, siteScope, requireRole('Admin'), versionsRouter, gateRouter, replayRouter, membersRouter, exportRouter);
+app.use('/api/public', publicRouter);
 app.use('/api/hub', hubRouter);
 app.use('/api/hub', isolationRouter);
 app.use('/api', eventsRouter);

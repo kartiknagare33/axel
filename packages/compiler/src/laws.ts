@@ -7,6 +7,7 @@ export const LAW_TEMPLATES: { id: string; label: string }[] = [
   { id: 'reachable', label: 'A workflow state can be reached' },
   { id: 'non_negative', label: 'On-hand stock never goes below zero' },
   { id: 'reserved_le_on_hand', label: 'Reserved stock never exceeds on-hand' },
+  { id: 'via_state', label: 'Records pass a check stage before they finish' },
 ];
 
 const entLabel = (bp: Blueprint, e: string) => bp.entities[e]?.label ?? e;
@@ -21,6 +22,7 @@ export function lawSentence(l: Law, bp: Blueprint): string {
     case 'ledger_balanced': return 'Stock figures always equal the sum of the stock ledger';
     case 'requires_state': return `Every ${entLabel(bp, e)} comes from a request that was ${l.state}`;
     case 'hidden_from': return `${l.role}s never see ${fieldLabel(bp, e, String(l.field))} (${entLabel(bp, e)})`;
+    case 'via_state': return `Every ${entLabel(bp, e)} passes '${l.via}' before it is ${l.state}`;
     case 'reachable': return `'${l.state}' can be reached in the ${l.workflow ?? 'request'} workflow`;
     default: return l.template;
   }
@@ -62,6 +64,14 @@ export function staticLaws(bp: Blueprint): LawCheck[] {
         return seen.has(String(l.state))
           ? { ...base, passed: true, dynamic: false, detail: 'A path exists from the first state.' }
           : { ...base, passed: false, dynamic: false, detail: `No sequence of steps leads from '${wf.initial}' to '${l.state}'.` };
+      }
+      case 'via_state': {
+        const wf = bp.workflows[e];
+        if (!wf || !wf.states.includes(String(l.state)) || !wf.states.includes(String(l.via)))
+          return { ...base, passed: false, dynamic: false, detail: `The ${e} workflow needs both '${l.state}' and '${l.via}' stages.` };
+        const shortcut = wf.transitions.find(t => t.to === l.state && t.from !== l.via);
+        if (shortcut) return { ...base, passed: false, dynamic: false, detail: `Step '${shortcut.label ?? shortcut.id}' reaches '${l.state}' from '${shortcut.from}' without passing '${l.via}'.` };
+        return { ...base, passed: true, dynamic: true };
       }
       case 'requires_state': {
         if (!bp.entities[e]) return { ...base, passed: true, dynamic: false, detail: `Not active: this site has no ${e}.` };

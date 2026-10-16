@@ -29,6 +29,7 @@ function useCreator(entity?: string) {
   const allowed = canCreate(entity);
   return {
     newButton: allowed ? <button onClick={() => setOpen(v => !v)} className={btn}><Plus className="h-4 w-4" />New</button> : null,
+    openForm: allowed ? () => setOpen(true) : undefined,
     form: open && entity ? <RecordForm entity={entity} onDone={() => setOpen(false)} onCancel={() => setOpen(false)} /> : null,
   };
 }
@@ -91,7 +92,12 @@ export function TableView({ page }: { page: Page }) {
               </tbody>
             </table>
           </div>
-          {!filtered.length && <EmptyState title={query ? 'No matches' : 'Nothing here yet'} hint={query ? 'Try a different search.' : 'Records you add will appear here.'} />}
+          {!filtered.length && (query
+            ? <EmptyState title="No matches" hint="Try a different search." />
+            : <EmptyState
+                title={`No ${ent.label} records yet`}
+                hint={c.openForm ? 'Create the first one, or bring in a spreadsheet with Excel > Import.' : 'Records appear here once someone with the right role creates them.'}
+                action={c.openForm ? <button onClick={c.openForm} className={btn}><Plus className="h-4 w-4" />Create the first one</button> : undefined} />)}
         </div>
       )}
     </div>

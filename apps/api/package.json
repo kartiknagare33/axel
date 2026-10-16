@@ -14,6 +14,7 @@
     "test:replay": "tsx --env-file=../../.env --test test/replay.test.ts",
     "test:infer": "tsx --env-file=../../.env --test test/infer.test.ts",
     "test:stage": "tsx --env-file=../../.env --test test/stage.test.ts",
+    "test:repair": "tsx --env-file=../../.env --test test/repair.test.ts",
     "set-phone": "tsx --env-file=../../.env scripts/set-phone.ts",
     "registers": "tsx scripts/gen-registers.ts",
     "docs": "tsx scripts/gen-docs.ts"

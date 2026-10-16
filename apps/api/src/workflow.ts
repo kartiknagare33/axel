@@ -123,13 +123,24 @@ export async function runTransition(
       case 'stock.return': await ledger.giveBack(tx, ctx, { itemId, qty: Number(args[1]), refId: id, key }); break;
       case 'repair.open':
         await tx.query(
-          `INSERT INTO repairs (site_id, request_id, serial_no, fault, created_under_version) VALUES ($1,$2,$3,$4,$5)`,
-          [ctx.siteId, id, rec.serial_no ?? null, rec.fault ?? null, ctx.versionId ?? null]);
+          `INSERT INTO repairs (site_id, request_id, serial_no, fault, data, created_under_version) VALUES ($1,$2,$3,$4,$5,$6)`,
+          [ctx.siteId, id, rec.serial_no ?? null, rec.fault ?? null,
+           { fault_category: rec.fault_category ?? null, board_model: rec.board_model ?? null, warranty_days: 90, reworks: 0 }, ctx.versionId ?? null]);
+        break;
+      case 'repair.test':
+        await tx.query(
+          `UPDATE repairs SET data = data || jsonb_build_object('test_result', $3::text,
+                    'reworks', COALESCE((data->>'reworks')::int, 0) + CASE WHEN $3::text = 'Fail' THEN 1 ELSE 0 END),
+                  row_version = row_version + 1, updated_at = now()
+            WHERE site_id = $1 AND request_id = $2 AND state <> 'closed'`,
+          [ctx.siteId, id, String(args[0] ?? '').toLowerCase() === 'fail' ? 'Fail' : 'Pass']);
         break;
       case 'repair.close':
         await tx.query(
-          `UPDATE repairs SET state = 'closed', closed_at = now(), row_version = row_version + 1, updated_at = now()
-            WHERE site_id = $1 AND request_id = $2 AND state <> 'closed'`, [ctx.siteId, id]);
+          `UPDATE repairs SET state = 'closed', closed_at = now(), row_version = row_version + 1, updated_at = now(),
+                  data = data || jsonb_build_object('outcome', COALESCE($3::text, data->>'outcome', 'Repaired'))
+            WHERE site_id = $1 AND request_id = $2 AND state <> 'closed'`,
+          [ctx.siteId, id, args[0] != null ? String(args[0]) : null]);
         break;
       default: break; // notify(): no-op in the prototype
     }

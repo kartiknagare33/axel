@@ -18,7 +18,8 @@
     "test:infer": "pnpm --filter @axel/api test:infer",
     "registers": "pnpm --filter @axel/api registers",
     "test:stage": "pnpm --filter @axel/api test:stage",
+    "test:repair": "pnpm --filter @axel/api test:repair",
     "set-phone": "pnpm --filter @axel/api set-phone",
-    "test": "pnpm test:isolation && pnpm test:workflow && pnpm test:excel && pnpm test:api && pnpm test:gate && pnpm test:replay && pnpm test:infer && pnpm test:stage"
+    "test": "pnpm test:isolation && pnpm test:workflow && pnpm test:excel && pnpm test:api && pnpm test:gate && pnpm test:replay && pnpm test:infer && pnpm test:stage && pnpm test:repair"
   }
 }

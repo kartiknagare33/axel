@@ -15,7 +15,7 @@ analytics.get('/analytics/:widgetId', ah(async (req, res) => {
   const spec = TABLES[widget.entity];
   if (!ent || !spec) throw notFound();
 
-  for (const k of [widget.field, widget.by]) {
+  for (const k of [widget.field, widget.by, ...Object.keys((widget as any).where ?? {})]) {
     if (!k || k === 'state' || k === 'month') continue;
     const f = ent.fields.find(x => x.key === k);
     if (!f || !canRead(f, role))
@@ -28,6 +28,9 @@ analytics.get('/analytics/:widgetId', ah(async (req, res) => {
   const groups = new Map<string, number[]>();
   for (const row of rows) {
     const rec = compiled.computeFormulas(widget.entity, toRecord(widget.entity, row));
+    const where = (widget as any).where as Record<string, string> | undefined;
+    if (where && Object.entries(where).some(([k, v]) => String(rec[k] ?? '') !== String(v))) continue;
+    if (widget.measure === 'avg' && widget.field && (rec[widget.field] == null || rec[widget.field] === '')) continue;
     const key = widget.by === 'month'
       ? new Date(rec.created_at as string).toISOString().slice(0, 7)
       : widget.by ? String(rec[widget.by] ?? 'none') : 'all';

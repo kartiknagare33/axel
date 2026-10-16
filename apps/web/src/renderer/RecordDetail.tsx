@@ -6,6 +6,8 @@ import { site, errOf, type ApiErr } from '../api';
 import { useSite, RANK } from '../hooks';
 import { Cell, Denial, StateBadge, labelOf, btn, btnGhost, card, inputBase } from './fields';
 import { RecordForm } from './RecordForm';
+import { RepeatBanner } from './passport';
+import { markDone } from '../help/progress';
 
 function StockBox({ id }: { id: string }) {
   const { siteId } = useSite();
@@ -129,7 +131,7 @@ export function RecordDetail() {
       to, idempotencyKey: crypto.randomUUID(), ifVersion: q.data?.row_version,
       payload: to === 'assigned' && assignee ? { assigned_to: assignee } : undefined,
     }),
-    onSuccess: () => { setErr(null); qc.invalidateQueries({ predicate: x => x.queryKey[1] === siteId }); },
+    onSuccess: () => { setErr(null); markDone('movedRequest'); qc.invalidateQueries({ predicate: x => x.queryKey[1] === siteId }); },
     onError: e => setErr(errOf(e)),
   });
 
@@ -164,6 +166,7 @@ export function RecordDetail() {
           {wf && rec.state && <div className="mt-6 border-t border-slate-100 pt-5"><Stepper states={wf.states} current={rec.state} /></div>}
         </div>
 
+        {rec.serial_no && entity === 'request' && <RepeatBanner serial={String(rec.serial_no)} recId={String(rec.id)} />}
         {!!transitions.length && (
           <div className={`${card} p-5`}>
             <div className="text-sm font-semibold text-slate-900">Next steps</div>

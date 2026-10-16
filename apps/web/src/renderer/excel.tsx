@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { http, errOf, type ApiErr } from '../api';
 import { useSite, RANK } from '../hooks';
 import { Denial, btn, btnGhost } from './fields';
+import { markDone } from '../help/progress';
 
 async function blobErr(e: any): Promise<ApiErr> {
   const d = e?.response?.data;
@@ -35,6 +36,7 @@ export function ExcelBar({ entity }: { entity: string }) {
       a.href = url; a.download = name;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      markDone('usedExcel');
     } catch (e) { setErr(await blobErr(e)); }
   }
 
@@ -63,7 +65,7 @@ export function ExcelBar({ entity }: { entity: string }) {
         <button onClick={() => download(`/excel/export/${entity}`, `${entity}.xlsx`)} className={btnGhost}>Export</button>
         <button onClick={() => download(`/excel/template/${entity}`, `${entity}-template.xlsx`)} className={btnGhost}>Template</button>
         <button onClick={() => { setOpen(o => !o); setReport(null); setErr(null); setDone(''); }} className={btnGhost}>Import...</button>
-        {!isManager && <span className="text-xs text-slate-400">Your export leaves out columns your role cannot see.</span>}
+        {!isManager && <span className="text-xs text-slate-400">Import is for Managers and Admins. Your export leaves out columns your role cannot see.</span>}
       </div>
       {open && (
         <div className="space-y-3 rounded-site border bg-white p-4 text-sm">

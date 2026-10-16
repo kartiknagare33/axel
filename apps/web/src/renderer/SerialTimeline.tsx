@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { site, errOf } from '../api';
 import { useSite } from '../hooks';
 import { Denial, StateBadge, btn } from './fields';
+import { Passport } from './passport';
 
 export function SerialTimeline() {
   const { siteId, base } = useSite();
@@ -26,6 +27,7 @@ export function SerialTimeline() {
       {q.isLoading && serial && <div className="h-24 animate-pulse rounded-site bg-slate-200" />}
       {q.error && <Denial err={errOf(q.error)} />}
       {q.data && !q.data.records.length && <div className="text-sm text-slate-500">No record in this unit has serial {serial}.</div>}
+      {!!q.data?.records.length && q.data.passport && <Passport p={q.data.passport} />}
       {!!q.data?.records.length && (
         <div className="grid gap-4 md:grid-cols-[1fr_1.3fr]">
           <div className="space-y-2">

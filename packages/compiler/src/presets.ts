@@ -88,11 +88,12 @@ export const PRESETS: Record<string, { name: string; description: string; build:
     }),
   },
   'repair-shop': {
-    name: 'Repair Shop',
-    description: 'Request, approve, repair, close, return.',
+    name: 'Repair & Refurbishment',
+    description: 'Receive, approve, repair, test, close, return.',
     build: () => finish({
       ...id,
       theme: { tokens: { primary: '#0E7490', surface: '#F0FDFA', radius: '12px', font: 'Inter' }, layout: 'kanban-first', density: 'comfortable', home: '/requests' },
+      publicTracking: { entity: 'request', field: 'serial_no' },
       modules: ['auth', 'users', 'dashboard', 'inventory', 'request', 'approval', 'pcb-repair', 'returns', 'analytics', 'excel'],
       entities: {
         item: item(),
@@ -108,13 +109,16 @@ export const PRESETS: Record<string, { name: string; description: string; build:
         ] },
       },
       workflows: { request: {
-        initial: 'draft', states: ['draft', 'submitted', 'approved', 'in_repair', 'closed', 'returned', 'rejected'], terminal: ['returned', 'rejected'],
+        initial: 'draft', states: ['draft', 'submitted', 'approved', 'in_repair', 'testing', 'closed', 'returned', 'rejected', 'scrapped'], terminal: ['returned', 'rejected', 'scrapped'],
         transitions: [
           { id: 't1', from: 'draft', to: 'submitted', label: 'Submit', roles: M, guard: 'stock.available(item_id) >= qty' },
           { id: 't2', from: 'submitted', to: 'approved', label: 'Approve', roles: MG, actions: ["stock.reserve(item_id, qty, ttl='72h')"] },
           { id: 't3', from: 'submitted', to: 'rejected', label: 'Reject', roles: MG },
           { id: 't4', from: 'approved', to: 'in_repair', label: 'Start repair', roles: MG, actions: ['stock.commit(item_id, qty)', 'repair.open()'] },
-          { id: 't5', from: 'in_repair', to: 'closed', label: 'Close', roles: MG, actions: ['repair.close()'] },
+          { id: 't5', from: 'in_repair', to: 'testing', label: 'Send to testing', roles: MG },
+          { id: 't7', from: 'testing', to: 'closed', label: 'Pass test', roles: MG, actions: ["repair.test('pass')", 'repair.close()'] },
+          { id: 't8', from: 'testing', to: 'in_repair', label: 'Fail test - rework', roles: MG, actions: ["repair.test('fail')"] },
+          { id: 't9', from: 'in_repair', to: 'scrapped', label: 'Beyond economical repair', roles: MG, actions: ["repair.close('Beyond economical repair')"] },
           { id: 't6', from: 'closed', to: 'returned', label: 'Return', roles: M, actions: ['stock.return(item_id, qty)'], owner_module: 'returns' },
         ],
       } },

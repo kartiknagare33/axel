@@ -6,6 +6,7 @@ export const SITE_IDS = {
   distribution:     '33333333-3333-4333-8333-333333333333',
 } as const;
 
+const FAULTS = ['No power', 'Short circuit', 'Component failure', 'Trace/pad damage', 'Solder joint', 'Firmware', 'Liquid damage', 'Other'];
 const R4 = ['Public', 'Member', 'Manager', 'Admin'] as Blueprint['roles'];
 const MGR = { read: ['Manager', 'Admin'], write: ['Manager', 'Admin'] } as Field['roles'];
 
@@ -53,6 +54,7 @@ export const centralStores: Blueprint = {
 
 export const serviceCentre: Blueprint = {
   configVersion: 3, siteId: SITE_IDS['service-centre'], slug: 'service-centre', name: 'Service Centre',
+  publicTracking: { entity: 'request', field: 'serial_no' },
   theme: { tokens: { primary: '#0F766E', surface: '#F8FAFC', radius: '12px', font: 'Inter' }, layout: 'kanban-first', density: 'comfortable', home: '/requests' },
   modules: ['auth', 'users', 'dashboard', 'inventory', 'request', 'approval', 'pcb-repair', 'returns', 'analytics', 'excel'],
   entities: {
@@ -62,41 +64,65 @@ export const serviceCentre: Blueprint = {
       { key: 'qty', type: 'number', label: 'Qty', min: 1, required: true },
       { key: 'unit_price', type: 'money', label: 'Unit price', roles: MGR },
       { key: 'total', type: 'formula', label: 'Total', expr: 'qty * unit_price', roles: { read: ['Manager', 'Admin'] } },
-      { key: 'serial_no', type: 'text', label: 'Board serial', unique: true, owner_module: 'pcb-repair', reason: 'board identity' },
+      { key: 'serial_no', type: 'text', label: 'Board serial', owner_module: 'pcb-repair', reason: 'board identity' },
+      { key: 'board_model', type: 'text', label: 'Board model' },
+      { key: 'customer', type: 'text', label: 'Customer' },
       { key: 'fault', type: 'text', label: 'Fault reported', required: true },
+      { key: 'fault_category', type: 'select', label: 'Fault category', options: FAULTS },
       { key: 'priority', type: 'select', label: 'Priority', options: ['low', 'normal', 'urgent'], default: 'normal' },
     ] },
     repair: { owner_module: 'pcb-repair', label: 'Repair log', fields: [
       { key: 'request_id', type: 'relation', to: 'request', label: 'Request', required: true },
       { key: 'serial_no', type: 'text', label: 'Serial' },
+      { key: 'board_model', type: 'text', label: 'Board model' },
       { key: 'fault', type: 'text', label: 'Fault' },
+      { key: 'fault_category', type: 'select', label: 'Fault category', options: FAULTS },
       { key: 'diagnosis', type: 'text', label: 'Diagnosis' },
+      { key: 'root_cause', type: 'text', label: 'Root cause' },
+      { key: 'parts_replaced', type: 'text', label: 'Parts replaced' },
+      { key: 'firmware_version', type: 'text', label: 'Firmware version' },
+      { key: 'technician', type: 'text', label: 'Technician' },
+      { key: 'bench_hours', type: 'number', label: 'Bench hours', min: 0 },
+      { key: 'test_result', type: 'select', label: 'Test result', options: ['Pass', 'Fail', 'Not tested'] },
+      { key: 'reworks', type: 'number', label: 'Rework rounds', system: true },
+      { key: 'outcome', type: 'select', label: 'Outcome', options: ['Repaired', 'Refurbished', 'Beyond economical repair', 'Scrapped'] },
+      { key: 'warranty_days', type: 'number', label: 'Warranty (days)', min: 0, default: 90 },
     ] },
   },
   workflows: {
     request: {
       initial: 'draft',
-      states: ['draft', 'submitted', 'approved', 'in_repair', 'closed', 'returned', 'rejected'],
+      states: ['draft', 'submitted', 'approved', 'in_repair', 'testing', 'closed', 'returned', 'rejected', 'scrapped'],
       transitions: [
         { id: 't1', from: 'draft', to: 'submitted', label: 'Submit', roles: ['Member', 'Manager', 'Admin'], guard: 'stock.available(item_id) >= qty' },
         { id: 't2', from: 'submitted', to: 'approved', label: 'Approve', roles: ['Manager', 'Admin'], actions: ["stock.reserve(item_id, qty, ttl='72h')"] },
         { id: 't3', from: 'submitted', to: 'rejected', label: 'Reject', roles: ['Manager', 'Admin'] },
         { id: 't4', from: 'approved', to: 'in_repair', label: 'Start repair', roles: ['Manager', 'Admin'], actions: ['stock.commit(item_id, qty)', 'repair.open()'] },
-        { id: 't5', from: 'in_repair', to: 'closed', label: 'Close', roles: ['Manager', 'Admin'], actions: ['repair.close()'] },
-        { id: 't6', from: 'closed', to: 'returned', label: 'Return to customer', roles: ['Member', 'Manager', 'Admin'], actions: ['stock.return(item_id, qty)'] },
+        { id: 't5', from: 'in_repair', to: 'testing', label: 'Send to testing', roles: ['Manager', 'Admin'] },
+        { id: 't7', from: 'testing', to: 'closed', label: 'Pass test', roles: ['Manager', 'Admin'], actions: ["repair.test('pass')", 'repair.close()'] },
+        { id: 't8', from: 'testing', to: 'in_repair', label: 'Fail test - rework', roles: ['Manager', 'Admin'], actions: ["repair.test('fail')"] },
+        { id: 't9', from: 'in_repair', to: 'scrapped', label: 'Beyond economical repair', roles: ['Manager', 'Admin'], actions: ["repair.close('Beyond economical repair')"] },
+        { id: 't6', from: 'closed', to: 'returned', label: 'Return to customer', roles: ['Member', 'Manager', 'Admin'], owner_module: 'returns' },
       ],
-      terminal: ['returned', 'rejected'],
+      terminal: ['returned', 'rejected', 'scrapped'],
     },
   },
   laws: [...baseLaws,
     { id: 'l3', template: 'hidden_from', entity: 'request', field: 'unit_price', role: 'Member' },
-    { id: 'l4', template: 'reachable', workflow: 'request', state: 'closed' }],
+    { id: 'l4', template: 'reachable', workflow: 'request', state: 'closed' },
+    { id: 'l6', template: 'via_state', entity: 'request', state: 'closed', via: 'testing' }],
   pages: [
-    { path: '/requests', title: 'Repair board', view: 'kanban', entity: 'request', groupBy: 'state', columns: ['serial_no', 'fault', 'priority', 'qty', 'total'] },
-    { path: '/repairs', title: 'Repair logs', view: 'table', entity: 'repair', columns: ['serial_no', 'fault', 'diagnosis', 'state'], roles: ['Manager', 'Admin'] },
+    { path: '/requests', title: 'Repair board', view: 'kanban', entity: 'request', groupBy: 'state', columns: ['serial_no', 'board_model', 'fault_category', 'priority', 'total'] },
+    { path: '/repairs', title: 'Repair logs', view: 'table', entity: 'repair', columns: ['serial_no', 'board_model', 'fault_category', 'test_result', 'reworks', 'outcome', 'bench_hours', 'state'], roles: ['Manager', 'Admin'] },
     { path: '/items', title: 'Parts', view: 'table', entity: 'item', columns: ['sku', 'name', 'available', 'unit_price'] },
     { path: '/analytics', title: 'Insights', view: 'dashboard', roles: ['Manager', 'Admin'], widgets: [
-      { id: 'w1', type: 'bar', title: 'Requests by state', entity: 'request', measure: 'count', by: 'state' },
+      { id: 'w3', type: 'stat', title: 'Boards in repair', entity: 'request', measure: 'count', where: { state: 'in_repair' } },
+      { id: 'w4', type: 'stat', title: 'Waiting for testing', entity: 'request', measure: 'count', where: { state: 'testing' } },
+      { id: 'w5', type: 'stat', title: 'Passed test first time', entity: 'repair', measure: 'count', where: { test_result: 'Pass', reworks: '0' } },
+      { id: 'w6', type: 'stat', title: 'Average bench hours', entity: 'repair', measure: 'avg', field: 'bench_hours' },
+      { id: 'w1', type: 'bar', title: 'Requests by stage', entity: 'request', measure: 'count', by: 'state' },
+      { id: 'w7', type: 'bar', title: 'Faults by category', entity: 'request', measure: 'count', by: 'fault_category' },
+      { id: 'w8', type: 'pie', title: 'Repair outcomes', entity: 'repair', measure: 'count', by: 'outcome' },
       { id: 'w2', type: 'pie', title: 'By priority', entity: 'request', measure: 'count', by: 'priority' },
     ] },
   ],

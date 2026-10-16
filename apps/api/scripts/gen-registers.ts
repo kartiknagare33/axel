@@ -45,15 +45,18 @@ async function service() {
     { header: 'Ticket No', width: 10 }, { header: 'Requested By', width: 14 }, { header: 'Part Name', width: 22 }, { header: 'Qty', width: 6 },
     { header: 'Serial No', width: 12 }, { header: 'Fault', width: 18 }, { header: 'Status', width: 12 }, { header: 'Sanctioned By', width: 14 },
     { header: 'Unit Price', width: 12 }, { header: 'Total', width: 12 }, { header: 'Returned On', width: 12 },
+    { header: 'Board Model', width: 18 }, { header: 'Customer', width: 18 }, { header: 'Fault Category', width: 18 },
   ];
-  const flow = ['Pending', 'Sanctioned', 'Repairing', 'Closed', 'Returned', 'Rejected'];
+  const flow = ['Pending', 'Sanctioned', 'Repairing', 'Testing', 'Closed', 'Returned', 'Rejected'];
   for (let i = 0; i < 50; i++) {
     const p = int(0, partNames.length - 1);
     const price = [2400, 3100, 12, 38, 150, 420][p];
     const qty = int(1, 4);
     const status = pick(flow);
     const row = ws.addRow([`T-${5000 + i}`, pick(people), partNames[p], qty, `PCB-${30000 + i}`, pick(['No power', 'Display dead', 'Relay chatter', 'Overheating']),
-      status, status === 'Pending' ? null : pick(['Priya', 'Rahul']), price, null, status === 'Returned' ? day(i % 25) : null]);
+      status, status === 'Pending' ? null : pick(['Priya', 'Rahul']), price, null, status === 'Returned' ? day(i % 25) : null,
+      pick(['MCB-200 controller', 'PSU-48V', 'VFD drive card', 'HMI panel board']), pick(['Acme Pumps', 'Bharat Textiles', 'Metro Elevators', 'Sunrise Plastics']),
+      pick(['No power', 'Short circuit', 'Component failure', 'Trace/pad damage', 'Solder joint', 'Firmware'])]);
     row.getCell(10).value = { formula: `D${row.number}*I${row.number}`, result: qty * price } as any;
   }
   ws.getColumn(9).numFmt = MONEY; ws.getColumn(10).numFmt = MONEY; bold(ws);

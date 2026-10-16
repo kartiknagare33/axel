@@ -8,6 +8,9 @@ import { useSession } from '../store/session';
 import { http, errOf } from '../api';
 import { ChaosCard } from './Chaos';
 import { SheetUnit } from './SheetUnit';
+import { HelpButton } from '../help/HelpPanel';
+import { HubHelp } from '../help/content';
+import { GettingStarted } from '../help/GettingStarted';
 
 const CORE = new Set(['auth', 'users', 'dashboard']);
 const LAYOUT_LABEL: Record<string, string> = { sidebar: 'Sidebar layout', topbar: 'Top bar layout', 'kanban-first': 'Board layout', 'queue-first': 'Work queue layout' };
@@ -141,6 +144,7 @@ export default function Hub() {
             <div className="leading-tight"><div className="text-sm font-semibold text-slate-900">Axel</div><div className="text-xs text-slate-500">Operations hub</div></div>
           </div>
           <div className="flex items-center gap-2">
+            <HelpButton title="The hub"><HubHelp /></HelpButton>
             {user?.hubAdmin && <Link to="/hub/ledger" className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"><ShieldCheck className="h-4 w-4" />Isolation Ledger</Link>}
             <div className="ml-2 flex items-center gap-2.5 border-l border-slate-200 pl-4">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">{(user?.name ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
@@ -162,6 +166,8 @@ export default function Hub() {
 
         {sites.isLoading && <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map(i => <div key={i} className="h-72 animate-pulse rounded-2xl bg-slate-200/70" />)}</div>}
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{list.map(s => <UnitCard key={s.id} s={s} />)}</div>
+
+        {!!list.length && <GettingStarted sites={list} isAdmin={list.some(s => s.role === 'Admin')} />}
 
         {!!list.length && (
           <div>

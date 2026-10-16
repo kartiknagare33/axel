@@ -25,6 +25,8 @@ REST over Express, JSON bodies, `Authorization: Bearer <jwt>`. Every site-scoped
 | POST | `/api/sites/:siteId/members` | Admin: `{ email, role, name?, password? }` (creates the account if new) |
 | PATCH | `/api/sites/:siteId/members/:userId` | Admin: `{ role }`; changing your own role is refused |
 | DELETE | `/api/sites/:siteId/members/:userId` | Admin: remove a member (not yourself) |
+| GET | `/api/public/track-units` | anyone | units that have public tracking switched on |
+| GET | `/api/public/track/:slug?ref=` | anyone | stage and dates for one reference (Public role; no names, prices or notes) |
 | GET | `/api/sites/:siteId/render-schema` | member | the compiled schema the renderer draws, masked for your role |
 | GET | `/api/events?token=` | signed in | server-sent events: `site_published`, `record_changed` |
 | POST | `/api/hub/chaos` | hub admin | `{ concurrency: 50, stock: 10 }` runs concurrent approvals and verifies the ledger |
