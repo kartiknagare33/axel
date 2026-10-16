@@ -4,9 +4,12 @@ import { sitesRouter } from './sites';
 import { siteScope } from './site';
 import { resources } from './resources';
 import { analytics } from './analytics';
+import { workflow } from './workflowRoutes';
+import { hubRouter } from './hub';
 import { errorHandler, ah } from './errors';
 import { pool } from './db';
 import { startPublishListener } from './blueprints';
+import { startJobs } from './jobs';
 
 const app = express();
 app.disable('x-powered-by');
@@ -19,9 +22,11 @@ app.get('/api/me', requireAuth, ah(async (req, res) => {
   res.json({ user: { id: u.id, email: u.email, name: u.name, hubAdmin: u.is_hub_admin }, memberships: await memberships(u.id) });
 }));
 app.use('/api/sites', sitesRouter);
-app.use('/api/:siteId', requireAuth, siteScope, analytics, resources);
+app.use('/api/hub', hubRouter);
+app.use('/api/:siteId', requireAuth, siteScope, analytics, workflow, resources);
 app.use(errorHandler);
 
 await startPublishListener();
+startJobs();
 const port = Number(process.env.PORT ?? 4000);
 app.listen(port, () => console.log(`Axel API on :${port}`));

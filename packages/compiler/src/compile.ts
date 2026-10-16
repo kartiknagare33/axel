@@ -12,7 +12,7 @@ export const canWrite = (f: Field, r: Role) =>
 
 const META = new Set(['id', 'state', 'row_version', 'created_at', 'updated_at']);
 const GUARD_CALLS = new Set(['stock.available', 'stock.on_hand', 'now']);
-const ACTION_CALLS = new Set(['stock.reserve', 'stock.commit', 'stock.release', 'stock.consume', 'repair.open', 'repair.close', 'notify']);
+const ACTION_CALLS = new Set(['stock.reserve', 'stock.commit', 'stock.release', 'stock.consume', 'stock.return', 'repair.open', 'repair.close', 'notify']);
 
 function lev(a: string, b: string) {
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);

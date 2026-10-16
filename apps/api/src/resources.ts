@@ -6,6 +6,7 @@ import { TABLES, resolveEntity, toRecord, split } from './entities';
 import { AxelError, ah, notFound } from './errors';
 import { requireRole } from './site';
 import { move } from './ledger';
+import { describeTransitions } from './workflow';
 
 export const resources = Router({ mergeParams: true });
 
@@ -94,11 +95,8 @@ resources.get('/:entity/:id', ah(async (req, res) => {
   const row = await withSite(req.site!.ctx, async c =>
     (await c.query(`SELECT * FROM ${TABLES[entity].table} WHERE id = $1`, [req.params.id])).rows[0]);
   if (!row) throw notFound();
-  const wf = req.site!.compiled.blueprint.workflows[entity];
-  const allowedTransitions = wf?.transitions
-    .filter(t => t.from === row.state && t.roles.includes(req.site!.role))
-    .map(t => ({ id: t.id, to: t.to, label: t.label ?? t.to })) ?? [];
-  res.json({ ...present(req, entity, row), allowedTransitions });
+  const transitions = describeTransitions(req.site!.compiled, entity, row, req.site!.role);
+  res.json({ ...present(req, entity, row), transitions, allowedTransitions: transitions.filter(t => t.allowed) });
 }));
 
 // UPDATE (optimistic concurrency)

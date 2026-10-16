@@ -5,6 +5,7 @@ import { compile, type Blueprint } from '@axel/compiler';
 import { pool, withSite } from '../src/db';
 import { hashBlueprint } from '../src/sites';
 import { centralStores, serviceCentre, distribution, SITE_IDS } from './blueprints';
+import { runLifecycle } from './lifecycle';
 
 const owner = new pg.Client({ connectionString: process.env.DATABASE_URL_OWNER });
 await owner.connect();
@@ -83,5 +84,7 @@ for (const bp of blueprints) {
   });
   console.log(`seeded ${bp.slug}`);
 }
+const managerIds = Object.fromEntries(Object.entries(people).map(([slug, ps]) => [slug, ps.find(p => p[1] === 'Manager')![0]]));
+await runLifecycle(blueprints, SITE_IDS, managerIds);
 await pool.end();
 console.log('done. login: admin@axel.dev / demo1234');

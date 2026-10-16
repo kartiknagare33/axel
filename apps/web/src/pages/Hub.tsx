@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useSites } from '../hooks';
 import { useSession } from '../store/session';
+import { ChaosCard } from './Chaos';
 
 const CORE = new Set(['auth', 'users', 'dashboard']);
 
@@ -50,6 +51,7 @@ export default function Hub() {
             <p className="text-sm text-slate-500">Without a shared hub, every unit rebuilds every module it uses.</p>
           </div>
         )}
+        {user?.hubAdmin && <ChaosCard />}
       </main>
     </div>
   );

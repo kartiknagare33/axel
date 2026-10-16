@@ -83,7 +83,7 @@ export const serviceCentre: Blueprint = {
         { id: 't3', from: 'submitted', to: 'rejected', label: 'Reject', roles: ['Manager', 'Admin'] },
         { id: 't4', from: 'approved', to: 'in_repair', label: 'Start repair', roles: ['Manager', 'Admin'], actions: ['stock.commit(item_id, qty)', 'repair.open()'] },
         { id: 't5', from: 'in_repair', to: 'closed', label: 'Close', roles: ['Manager', 'Admin'], actions: ['repair.close()'] },
-        { id: 't6', from: 'closed', to: 'returned', label: 'Return to customer', roles: ['Member', 'Manager', 'Admin'], actions: ["stock.release(item_id, qty, reason='return')"] },
+        { id: 't6', from: 'closed', to: 'returned', label: 'Return to customer', roles: ['Member', 'Manager', 'Admin'], actions: ['stock.return(item_id, qty)'] },
       ],
       terminal: ['returned', 'rejected'],
     },

@@ -8,6 +8,7 @@
     "seed": "pnpm --filter @axel/api seed",
     "dev:api": "pnpm --filter @axel/api dev",
     "dev:web": "pnpm --filter @axel/web dev",
-    "test:isolation": "pnpm --filter @axel/api test:isolation"
+    "test:isolation": "pnpm --filter @axel/api test:isolation",
+    "test:workflow": "pnpm --filter @axel/api test:workflow"
   }
 }

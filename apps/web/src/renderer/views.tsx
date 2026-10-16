@@ -10,6 +10,7 @@ import { site, errOf } from '../api';
 import { useList, useSite, RANK } from '../hooks';
 import { Cell, columnFields, Denial, labelOf, StateBadge, btn, money } from './fields';
 import { RecordForm } from './RecordForm';
+import { KanbanBoard } from './kanban';
 
 function useDensity() {
   const { schema } = useSite();
@@ -224,6 +225,6 @@ export function DashboardView({ page }: { page: Page }) {
 }
 
 export function PageView({ page }: { page: Page }) {
-  const V = ({ table: TableView, kanban: KanbanView, queue: QueueView, dashboard: DashboardView } as Record<string, (p: { page: Page }) => JSX.Element>)[page.view] ?? TableView;
+  const V = ({ table: TableView, kanban: KanbanBoard, queue: QueueView, dashboard: DashboardView } as Record<string, (p: { page: Page }) => JSX.Element>)[page.view] ?? TableView;
   return <div className="space-y-4"><V page={page} /></div>;
 }
