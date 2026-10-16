@@ -1,5 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { finishLogin } from './otp';
 import ExcelJS from 'exceljs';
 import { infer, compile, type Sheet } from '@axel/compiler';
 
@@ -40,7 +41,7 @@ test('a stock sheet alone infers a sidebar inventory site', () => {
 
 async function login(email: string) {
   const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: 'demo1234' }) });
-  return (await r.json()).token as string;
+  return (await finishLogin(r)) as string;
 }
 let admin = '', manager = '', member = '';
 before(async () => { [admin, manager, member] = await Promise.all(['admin@axel.dev', 'manager@sc.dev', 'member@cs.dev'].map(login)); });

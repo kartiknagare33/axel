@@ -15,8 +15,14 @@ await owner.query(`TRUNCATE users, sites, memberships, site_versions, site_deplo
 await owner.end();
 
 const hash = await bcrypt.hash('demo1234', 12);
-const mk = async (email: string, name: string, hub = false) =>
-  (await pool.query('INSERT INTO users (email, password_hash, name, is_hub_admin) VALUES ($1,$2,$3,$4) RETURNING id', [email, hash, name, hub])).rows[0].id as string;
+let phoneN = 0;
+const normPhone = (p: string) => (p.startsWith('+') ? p : `+91${p}`).replace(/[\s-]/g, '');
+// Demo accounts get distinct placeholder numbers (fine with a test key). The hub admin can use your real number.
+const mk = async (email: string, name: string, hub = false) => {
+  phoneN++;
+  const phone = hub && process.env.DEMO_ADMIN_PHONE ? normPhone(process.env.DEMO_ADMIN_PHONE) : `+919000000${String(phoneN).padStart(3, '0')}`;
+  return (await pool.query('INSERT INTO users (email, password_hash, name, is_hub_admin, phone) VALUES ($1,$2,$3,$4,$5) RETURNING id', [email, hash, name, hub, phone])).rows[0].id as string;
+};
 
 const admin = await mk('admin@axel.dev', 'Asha Admin', true);
 const people: Record<string, [string, 'Manager' | 'Member'][]> = {

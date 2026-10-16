@@ -1,5 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { finishLogin } from './otp';
 import ExcelJS from 'exceljs';
 
 const API = process.env.API_URL ?? 'http://localhost:4000/api';
@@ -8,7 +9,7 @@ const CS = '11111111-1111-4111-8111-111111111111';
 async function login(email: string) {
   const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: 'demo1234' }) });
   assert.equal(r.status, 200);
-  return (await r.json()).token as string;
+  return (await finishLogin(r)) as string;
 }
 async function upload(token: string, buf: Buffer, dryRun: boolean) {
   const r = await fetch(`${API}/${CS}/excel/import/item?dryRun=${dryRun}`, {

@@ -1,5 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { finishLogin } from './otp';
 
 const API = process.env.API_URL ?? 'http://localhost:4000/api';
 const SC = '22222222-2222-4222-8222-222222222222';
@@ -30,7 +31,7 @@ const dropRejected = (bp: any) => {
 
 before(async () => {
   const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'admin@axel.dev', password: 'demo1234' }) });
-  admin = (await r.json()).token;
+  admin = (await finishLogin(r));
 });
 
 test('an unchanged draft replays identically', () => withDraft(() => {}, async id => {

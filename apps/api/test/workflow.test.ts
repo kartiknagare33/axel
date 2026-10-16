@@ -1,5 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { finishLogin } from './otp';
 
 const API = process.env.API_URL ?? 'http://localhost:4000/api';
 const SC = '22222222-2222-4222-8222-222222222222';
@@ -7,7 +8,7 @@ const SC = '22222222-2222-4222-8222-222222222222';
 async function login(email: string) {
   const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: 'demo1234' }) });
   assert.equal(r.status, 200);
-  return (await r.json()).token as string;
+  return (await finishLogin(r)) as string;
 }
 async function call(token: string, method: string, site: string, path: string, body?: unknown) {
   const r = await fetch(`${API}/${site}${path}`, {

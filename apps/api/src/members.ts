@@ -19,13 +19,14 @@ membersRouter.post('/members', ah(async (req, res) => {
   const b = z.object({
     email: z.string().email(), role: ROLE,
     name: z.string().min(2).max(80).optional(), password: z.string().min(8).max(100).optional(),
+    phone: z.string().trim().regex(/^(\+91)?[6-9]\d{9}$/, 'Use an Indian mobile number, e.g. 9876543210').optional(),
   }).parse(req.body);
   let user = (await pool.query('SELECT id, name, email FROM users WHERE email = $1', [b.email])).rows[0];
   if (!user) {
     if (!b.name || !b.password)
       throw new AxelError('VALIDATION_FAILED', 422, 'This email has no account yet. Give a name and a starting password (8+ characters) to create one.', { needsAccount: true });
-    user = (await pool.query('INSERT INTO users (email, password_hash, name) VALUES ($1,$2,$3) RETURNING id, name, email',
-      [b.email, await bcrypt.hash(b.password, 12), b.name])).rows[0];
+    user = (await pool.query('INSERT INTO users (email, password_hash, name, phone) VALUES ($1,$2,$3,$4) RETURNING id, name, email',
+      [b.email, await bcrypt.hash(b.password, 12), b.name, b.phone ? (b.phone.startsWith('+91') ? b.phone : `+91${b.phone}`) : null])).rows[0];
   }
   await withSite(req.site!.ctx, async c => {
     const r = await c.query('INSERT INTO memberships (site_id, user_id, role) VALUES ($1,$2,$3) ON CONFLICT (site_id, user_id) DO NOTHING RETURNING id',

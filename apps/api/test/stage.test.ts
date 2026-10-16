@@ -1,5 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { finishLogin } from './otp';
 import JSZip from 'jszip';
 
 const API = process.env.API_URL ?? 'http://localhost:4000/api';
@@ -8,7 +9,7 @@ const DS = '33333333-3333-4333-8333-333333333333';
 
 async function login(email: string) {
   const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: 'demo1234' }) });
-  return (await r.json()).token as string;
+  return (await finishLogin(r)) as string;
 }
 let admin = '', scManager = '', csManager = '';
 before(async () => { [admin, scManager, csManager] = await Promise.all(['admin@axel.dev', 'manager@sc.dev', 'manager@cs.dev'].map(login)); });

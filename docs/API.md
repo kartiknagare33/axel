@@ -9,6 +9,8 @@ REST over Express, JSON bodies, `Authorization: Bearer <jwt>`. Every site-scoped
 | Method | Path | Who | Notes |
 |---|---|---|---|
 | POST | `/api/auth/login` | anyone | `{ email, password }` to `{ token, user, memberships }`. Roles are read per request from memberships, never trusted from the token. |
+| POST | `/api/auth/verify-otp` | anyone | `{ challenge, code }` after a login that returned `otpRequired`; MiniMoth verifies the code, then `{ token, user, memberships }` |
+| POST | `/api/auth/resend-otp` | anyone | `{ challenge }` sends a new code |
 | POST | `/api/auth/refresh` | signed in | new token |
 | GET | `/api/me` | signed in | user and memberships |
 | GET | `/api/sites` | signed in | sites you belong to, with theme and modules |

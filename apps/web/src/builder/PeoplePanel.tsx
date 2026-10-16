@@ -11,6 +11,7 @@ export function PeoplePanel({ siteId, H }: { siteId: string; H: any }) {
   const [role, setRole] = useState('Member');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [needsAccount, setNeedsAccount] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -20,7 +21,7 @@ export function PeoplePanel({ siteId, H }: { siteId: string; H: any }) {
   async function add() {
     setMsg(null);
     try {
-      await http.post(`/sites/${siteId}/members`, { email, role, ...(needsAccount ? { name, password } : {}) }, H);
+      await http.post(`/sites/${siteId}/members`, { email, role, ...(needsAccount ? { name, password, ...(phone ? { phone } : {}) } : {}) }, H);
       setMsg({ ok: true, text: `${email} added as ${role}.` });
       setEmail(''); setName(''); setPassword(''); setNeedsAccount(false);
       load();
@@ -67,6 +68,7 @@ export function PeoplePanel({ siteId, H }: { siteId: string; H: any }) {
           <div className="grid grid-cols-2 gap-2">
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Full name" className="rounded border px-2 py-1" />
             <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Starting password (8+)" type="password" className="rounded border px-2 py-1" />
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Mobile for the login code, e.g. 9876543210" className="col-span-2 rounded border px-2 py-1" />
           </div>
         )}
         <button disabled={!email} onClick={add} className="rounded-md bg-slate-900 px-3 py-1 text-xs text-white disabled:opacity-40">{needsAccount ? 'Create account and add' : 'Add'}</button>

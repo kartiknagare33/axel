@@ -21,6 +21,7 @@ import { errorHandler, ah } from './errors';
 import { pool } from './db';
 import { startPublishListener } from './blueprints';
 import { startJobs } from './jobs';
+import { otpMode } from './minimoth';
 
 const app = express();
 app.disable('x-powered-by');
@@ -41,6 +42,7 @@ app.use('/api', eventsRouter);
 app.use('/api/:siteId', requireAuth, siteScope, analytics, aliases, timeline, workflow, excel, resources);
 app.use(errorHandler);
 
+console.log(`OTP login (MiniMoth): ${otpMode()}; required for: ${otpMode() === 'off' ? 'nobody (set MINIMOTH_API_KEY in .env)' : process.env.OTP_REQUIRED ?? 'all'}`);
 await startPublishListener();
 startJobs();
 const port = Number(process.env.PORT ?? 4000);

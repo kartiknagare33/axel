@@ -139,6 +139,14 @@ Most platforms help you *build* a site. Axel focuses on what they leave to luck:
   - `deployments.json` with every proof record
 
 ---
+## Login: password + one-time code (MiniMoth)
+
+- **Step 1:** email and password, checked with bcrypt.
+- **Step 2:** Axel asks [MiniMoth](https://minimoth.dev) to send a 6-digit code (WhatsApp first, SMS fallback); the user enters it and MiniMoth verifies it.
+- **Then** Axel issues its session JWT carrying the user's **roles and allowed sites** (`sites: [{ slug, role }]`, `amr: ["pwd", "otp"]`). The server still re-reads the role from the database on every request, so a demotion applies on the very next click.
+- The OTP challenge is signed with a different key from the session, so it can never be used as a login token.
+- Keys live only in `.env` (`MINIMOTH_API_KEY`, never committed). `OTP_REQUIRED=all | admins | off`. With a `mm_test_` key nothing is sent and the code is `000000`.
+
 ## How Axel compares
 
 | Capability | Retool / Appsmith | Odoo / Zoho | Wix / Webflow | Axel |
