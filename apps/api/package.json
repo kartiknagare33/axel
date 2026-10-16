@@ -7,11 +7,15 @@
     "migrate": "tsx --env-file=../../.env src/migrate.ts",
     "seed": "tsx --env-file=../../.env seed/seed.ts",
     "test:isolation": "tsx --env-file=../../.env --test test/isolation.test.ts",
-    "test:workflow": "tsx --env-file=../../.env --test test/workflow.test.ts"
+    "test:workflow": "tsx --env-file=../../.env --test test/workflow.test.ts",
+    "test:excel": "tsx --env-file=../../.env --test test/excel.test.ts",
+    "test:api": "tsx --env-file=../../.env --test test/api.test.ts",
+    "docs": "tsx scripts/gen-docs.ts"
   },
   "dependencies": {
     "@axel/compiler": "workspace:*",
     "bcryptjs": "^2.4.3",
+    "exceljs": "^4.4.0",
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.0",

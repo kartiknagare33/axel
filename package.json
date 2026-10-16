@@ -9,6 +9,10 @@
     "dev:api": "pnpm --filter @axel/api dev",
     "dev:web": "pnpm --filter @axel/web dev",
     "test:isolation": "pnpm --filter @axel/api test:isolation",
-    "test:workflow": "pnpm --filter @axel/api test:workflow"
+    "test:workflow": "pnpm --filter @axel/api test:workflow",
+    "test:excel": "pnpm --filter @axel/api test:excel",
+    "test:api": "pnpm --filter @axel/api test:api",
+    "docs": "pnpm --filter @axel/api docs",
+    "test": "pnpm test:isolation && pnpm test:workflow && pnpm test:excel && pnpm test:api"
   }
 }

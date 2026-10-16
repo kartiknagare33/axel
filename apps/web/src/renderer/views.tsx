@@ -11,6 +11,7 @@ import { useList, useSite, RANK } from '../hooks';
 import { Cell, columnFields, Denial, labelOf, StateBadge, btn, money } from './fields';
 import { RecordForm } from './RecordForm';
 import { KanbanBoard } from './kanban';
+import { ExcelBar } from './excel';
 
 function useDensity() {
   const { schema } = useSite();
@@ -62,6 +63,7 @@ export function TableView({ page }: { page: Page }) {
     <>
       <PageHeader title={page.title} count={q.data?.total} onNew={c.onNew} />
       {c.form}
+      <ExcelBar entity={entity} />
       <QueryState q={q} />
       {!q.isLoading && !q.error && (
         <div className="overflow-x-auto rounded-site border bg-white">
@@ -99,6 +101,7 @@ export function KanbanView({ page }: { page: Page }) {
     <>
       <PageHeader title={page.title} count={q.data?.total} onNew={c.onNew} />
       {c.form}
+      <ExcelBar entity={entity} />
       <QueryState q={q} />
       {!q.isLoading && !q.error && (
         <div className="flex gap-3 overflow-x-auto pb-2">

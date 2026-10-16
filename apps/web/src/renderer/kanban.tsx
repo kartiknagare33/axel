@@ -6,6 +6,7 @@ import { site, errOf, type ApiErr } from '../api';
 import { useList, useSite, RANK } from '../hooks';
 import { Cell, columnFields, Denial, labelOf, StateBadge, btn } from './fields';
 import { RecordForm } from './RecordForm';
+import { ExcelBar } from './excel';
 
 // Kanban grouped by workflow state. Dropping a card on a column runs the matching transition.
 export function KanbanBoard({ page }: { page: Page }) {
@@ -57,6 +58,7 @@ export function KanbanBoard({ page }: { page: Page }) {
         {canNew && <button onClick={() => setCreating(v => !v)} className={btn}>+ New</button>}
       </div>
       {creating && <RecordForm entity={entity} onDone={() => setCreating(false)} onCancel={() => setCreating(false)} />}
+      <ExcelBar entity={entity} />
       {err && <Denial err={err} />}
       {q.isLoading && <div className="h-40 animate-pulse rounded-site bg-slate-200" />}
       {q.error && <Denial err={errOf(q.error)} />}

@@ -8,6 +8,8 @@ import { workflow } from './workflowRoutes';
 import { hubRouter } from './hub';
 import { versionsRouter } from './versions';
 import { eventsRouter } from './events';
+import { excel } from './excel';
+import { aliases } from './aliases';
 import { errorHandler, ah } from './errors';
 import { pool } from './db';
 import { startPublishListener } from './blueprints';
@@ -27,7 +29,7 @@ app.use('/api/sites', sitesRouter);
 app.use('/api/sites/:siteId', requireAuth, siteScope, requireRole('Admin'), versionsRouter);
 app.use('/api/hub', hubRouter);
 app.use('/api', eventsRouter);
-app.use('/api/:siteId', requireAuth, siteScope, analytics, workflow, resources);
+app.use('/api/:siteId', requireAuth, siteScope, analytics, aliases, workflow, excel, resources);
 app.use(errorHandler);
 
 await startPublishListener();
