@@ -5,3 +5,4 @@ export * from './compile';
 export * from './ports';
 export * from './modules';
 export * from './presets';
+export * from './laws';

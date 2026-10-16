@@ -34,6 +34,17 @@
 
 *Say:* "Typed ports stop invalid systems. Publish is live. Rollback never deletes data."
 
+## The Release Gate (1.5 min)
+
+- Central Stores builder: click the **Inventory** node. On **unit_price**, click **Member: hidden** so it says **Member: sees**.
+- Click **Run gate**: **BLOCKED**, "Law l3: Members never see Unit price". Click **Undo**, run again: **PASSED**.
+- Distribution builder, **JSON** tab: inside `"transitions"` of `request`, add
+  `{ "id": "t99", "from": "submitted", "to": "assigned", "label": "Fast-track", "roles": ["Manager", "Admin"] },`
+  then **Apply JSON**, **Gate** tab, choose **1000 steps**, **Run gate**: BLOCKED with a counter-example such as "Law l2 broken at step 37: Assignment ... was created for a request that never became 'approved'", and the steps that led there.
+- Undo or Discard.
+
+*Say:* "Nobody tests by hand. The gate acts out hundreds of random sessions on real data, rolls everything back, and refuses to publish anything that breaks a rule."
+
 ## Brief step 4: Excel with role rules (1.5 min)
 
 - As `manager@cs.dev`, Central Stores, Stock register: **Template** (dropdowns), fill two rows with one missing SKU, **Import**, **Check file**: the row is reported. Fix, import; stock appears through the ledger.

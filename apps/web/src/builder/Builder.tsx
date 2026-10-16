@@ -10,6 +10,8 @@ import {
   type Blueprint, type Diagnostic, type Edge, type Field, type FieldType,
 } from '@axel/compiler';
 import { http, errOf } from '../api';
+import { GatePanel } from './GatePanel';
+import { LawsPanel, RoleToggle } from './LawsPanel';
 
 const CORE = new Set(['auth', 'users', 'dashboard']);
 const PORT_COLOR: Record<string, string> = {
@@ -136,7 +138,9 @@ function BuilderInner() {
   const [dirty, setDirty] = useState(false);
   const [history, setHistory] = useState<Blueprint[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [tab, setTab] = useState<'problems' | 'module' | 'theme' | 'json' | 'versions'>('problems');
+  const [tab, setTab] = useState<'problems' | 'module' | 'laws' | 'gate' | 'theme' | 'json' | 'versions'>('problems');
+  const [gate, setGate] = useState<any>(null);
+  const [gating, setGating] = useState(false);
   const [msg, setMsg] = useState<Msg>(null);
   const [busy, setBusy] = useState(false);
   const [rfNodes, setRfNodes] = useState<any[]>([]);
@@ -221,9 +225,25 @@ function BuilderInner() {
     } finally { setBusy(false); }
   }
 
+  async function runGate(steps = 300, versionId?: string) {
+    const id = versionId ?? (dirty || !draft ? await save() : draft.id);
+    if (!id) return null;
+    setTab('gate'); setGating(true); setGate(null);
+    try {
+      const r = await http.post(`/sites/${siteId}/versions/${id}/gate`, { steps }, H);
+      setGate(r.data);
+      return r.data;
+    } catch (e) { setMsg({ kind: 'err', text: errOf(e).message }); return null; }
+    finally { setGating(false); }
+  }
+
   async function publish(confirm = false) {
     const id = dirty || !draft ? await save() : draft.id;
     if (!id) return;
+    if (!confirm) {
+      const g = await runGate(300, id);
+      if (!g?.passed) { setMsg({ kind: 'err', text: 'The Release Gate blocked this draft, so nothing was published. See the Gate tab.' }); return; }
+    }
     setBusy(true);
     try {
       const r = await http.post(`/sites/${siteId}/publish`, { versionId: id, confirm }, H);
@@ -300,6 +320,7 @@ function BuilderInner() {
           <button onClick={() => save()} disabled={busy || !dirty} className={ghost}>Save draft</button>
           <button onClick={preview} disabled={busy} className={ghost}>Preview</button>
           <a href={`/${site.slug}`} target="_blank" rel="noreferrer" className={ghost}>Open live</a>
+          <button onClick={() => runGate()} disabled={busy || gating || !!errors.length} className={ghost}>Run gate</button>
           <button onClick={() => publish()} disabled={busy || !!errors.length || (!dirty && !draft)} className={btn}
             title={errors.length ? 'Fix the problems first' : ''}>Publish</button>
         </div>
@@ -352,14 +373,16 @@ function BuilderInner() {
         </div>
 
         <aside className="flex min-h-0 flex-col border-l bg-white">
-          <nav className="flex border-b text-sm">
-            {([['problems', `Problems${errors.length ? ` (${errors.length})` : ''}`], ['module', 'Module'], ['theme', 'Theme'], ['json', 'JSON'], ['versions', 'Versions']] as const).map(([k, label]) => (
+          <nav className="flex border-b text-xs">
+            {([['problems', `Problems${errors.length ? ` (${errors.length})` : ''}`], ['module', 'Module'], ['laws', 'Laws'], ['gate', 'Gate'], ['theme', 'Theme'], ['json', 'JSON'], ['versions', 'Versions']] as const).map(([k, label]) => (
               <button key={k} onClick={() => setTab(k)} className={`flex-1 border-b-2 px-2 py-2 ${tab === k ? 'border-slate-900 font-medium' : 'border-transparent text-slate-500'}`}>{label}</button>
             ))}
           </nav>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             {tab === 'problems' && <ProblemsPanel diags={diags} changes={changes} onFix={d => update(applyFix(bp, d.fix?.patch))} onSelect={id => { setSelected(id); setTab('module'); }} />}
             {tab === 'module' && <ModulePanel bp={bp} id={selected} update={update} onRemove={id => { update(removeModule(bp, id)); setSelected(null); }} />}
+            {tab === 'laws' && <LawsPanel bp={bp} update={update} />}
+            {tab === 'gate' && <GatePanel gate={gate} gating={gating} onRun={steps => runGate(steps)} />}
             {tab === 'theme' && <ThemePanel bp={bp} update={update} />}
             {tab === 'json' && <JsonPanel bp={bp} update={update} />}
             {tab === 'versions' && <VersionsPanel siteId={siteId} H={H} refreshKey={versionsKey} onChanged={async m => { setMsg(m); setVersionsKey(k => k + 1); await load(); }} />}
@@ -454,6 +477,7 @@ function FieldEditor({ bp, entity, update }: { bp: Blueprint; entity: string; up
         {ent.fields.map(x => (
           <div key={x.key} className="flex items-center justify-between text-xs">
             <span><span className="font-mono">{x.key}</span> <span className="text-slate-400">{x.type}{x.expr ? ` = ${x.expr}` : ''}{x.roles?.read ? ` - visible to ${x.roles.read.join(', ')}` : ''}</span></span>
+            <RoleToggle bp={bp} entity={entity} field={x} update={update} />
             {x.origin?.kind === 'manual' && <button onClick={() => removeField(x.key)} className="text-red-600">remove</button>}
           </div>
         ))}
@@ -542,7 +566,7 @@ function VersionsPanel({ siteId, H, refreshKey, onChanged }: { siteId: string; H
       onChanged({ kind: 'ok', text: `Rolled back. ${r.data.changes.join(', ')}. All data is kept.` });
     } catch (e) {
       const er = errOf(e);
-      if (er.code === 'DESTRUCTIVE_CHANGE_UNPLANNED') onChanged({ kind: 'warn', text: er.message, action: { label: 'Roll back anyway', run: () => rollback(versionId, true) } });
+      if (er.code === 'DESTRUCTIVE_CHANGE_UNPLANNED' || er.code === 'GATE_NOT_PASSED') onChanged({ kind: 'warn', text: er.message, action: { label: 'Roll back anyway', run: () => rollback(versionId, true) } });
       else onChanged({ kind: 'err', text: er.message });
     }
   }
@@ -559,6 +583,7 @@ function VersionsPanel({ siteId, H, refreshKey, onChanged }: { siteId: string; H
             <span className="text-xs text-slate-500">{new Date(d.deployed_at).toLocaleString()}</span>
           </div>
           <div className="text-xs text-slate-500">by {d.deployed_by_name ?? 'system'} - version {String(d.version_id).slice(0, 8)} - {String(d.proof?.versionHash ?? '').slice(0, 15)}</div>
+          {d.proof?.gate && <div className="text-xs text-emerald-700">Release Gate: {d.proof.gate.passed ? 'passed' : 'overridden'}, {d.proof.gate.steps} steps, seed {d.proof.gate.seed}</div>}
           {!!d.proof?.changes?.length && <ul className="mt-1 font-mono text-[11px]">{d.proof.changes.map((c: string) => <li key={c}>{c}</li>)}</ul>}
           {d.version_id !== liveVersion && <button onClick={() => rollback(d.version_id)} className="mt-2 rounded-md border px-2 py-1 text-xs">Roll back to this version</button>}
         </div>

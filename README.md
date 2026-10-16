@@ -10,8 +10,18 @@ Axel runs many completely different operations sites from one codebase. Each uni
 - **Build without code.** Drag modules onto a canvas with typed ports. The builder explains problems in plain English ("Approval requires Request") and fixes most of them in one click.
 - **Publish live, roll back safely.** Preview a draft on real data, publish with no restart, and every open window updates by itself. Roll back to any earlier version; data is never deleted.
 - **Transactional stock.** Approve reserves stock, assign or repair commits it, return gives it back. 50 concurrent approvals against 10 units: exactly 10 succeed (Chaos test on the hub).
-- **Isolation you can prove.** FORCE row-level security, composite foreign keys, transaction-local site context, 404-not-403 for other sites. 23 automated tests.
+- **Isolation you can prove.** FORCE row-level security, composite foreign keys, transaction-local site context, 404-not-403 for other sites. 27 automated tests.
 - **Excel with role rules.** Templates with dropdowns, dry-run imports with row-by-row errors, all-or-nothing commits, exports that leave out what your role cannot see.
+
+## Release Gate and Laws
+
+Nothing is published without evidence. Each site declares **Laws** as plain sentences, for example "Members never see Unit price", "Every Assignment comes from a request that was approved", "Reserved stock never exceeds on-hand stock". Before a draft goes live, the **Release Gate**:
+
+1. compiles the Blueprint (zero errors allowed);
+2. checks each Law against the Blueprint itself (for example, a calculated field that would reveal a hidden price);
+3. performs hundreds of random actions as Members, Managers and Admins on the site's real data, inside a transaction that is always rolled back, and checks every Law after each step.
+
+If a Law breaks, publish is blocked and the builder shows the counter-example: the exact steps that broke it, with a seed to replay. The proof (steps, seed, duration) is stored on every deployment; rollbacks run a short gate too.
 
 ## Quick start
 
@@ -82,7 +92,7 @@ axel/
 
 ## Tests
 
-Run with Axel started: `pnpm test` (23 tests).
+Run with Axel started: `pnpm test` (27 tests).
 
 | Suite | Proves |
 |---|---|
@@ -90,6 +100,7 @@ Run with Axel started: `pnpm test` (23 tests).
 | `test:workflow` (4) | 50 concurrent approvals vs 10 units, role on transition, stale versions refused, double-click idempotent |
 | `test:excel` (4) | Dry-run row errors, all-or-nothing commit, Member cannot import, export follows the role mask |
 | `test:api` (4) | Every brief endpoint works for its site and refuses other sites |
+| `test:gate` (4) | Unchanged sites pass the gate, a leaked price is blocked by a Law, a shortcut that skips approval is caught with a counter-example, publishing without a passing gate is refused |
 
 ## Docs
 
@@ -110,4 +121,4 @@ Regenerate the generated docs with `pnpm docs`.
 
 ## What comes next
 
-The Blueprint and compiler are designed for these next steps: a Release Gate that runs declared Laws as property-based tests before publish, a Replay Report that runs real history through a proposed version, and a Sheet Inferencer that derives a site from a unit's existing spreadsheets.
+Built: the Release Gate with Laws (above). Next: a Replay Report that runs real history through a proposed version, and a Sheet Inferencer that derives a site from a unit's existing spreadsheets.

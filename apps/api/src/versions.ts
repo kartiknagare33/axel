@@ -7,6 +7,7 @@ import { TABLES } from './entities';
 import { AxelError, ah, notFound } from './errors';
 import { hashBlueprint } from './sites';
 import { invalidate } from './blueprints';
+import { runGate } from './laws';
 
 // Mounted at /api/sites/:siteId with requireAuth, siteScope, requireRole('Admin').
 export const versionsRouter = Router({ mergeParams: true });
@@ -52,7 +53,7 @@ async function stranded(c: Tx, a: Blueprint, b: Blueprint) {
   return out;
 }
 
-async function deploy(req: any, c: Tx, targetId: string, o: { rollback: boolean; confirm: boolean; reason?: string }) {
+async function deploy(req: any, c: Tx, targetId: string, o: { rollback: boolean; confirm: boolean; reason?: string; gate?: any }) {
   const s = req.site;
   const cur = (await c.query(
     `SELECT v.id, v.config FROM sites st JOIN site_versions v ON v.id = st.published_version_id WHERE st.id = $1 FOR UPDATE OF st`,
@@ -67,6 +68,16 @@ async function deploy(req: any, c: Tx, targetId: string, o: { rollback: boolean;
   const compiled = compile(bp);
   const errors = compiled.diagnostics.filter(d => d.severity === 'error');
   if (errors.length) throw new AxelError('GATE_NOT_PASSED', 422, `Fix ${errors.length} problem(s) first: ${errors[0].message}`, { diagnostics: errors });
+  let gateProof: any = o.gate ?? null;
+  if (!o.rollback) {
+    const g = (await c.query(
+      'SELECT passed, seed, steps, duration_ms FROM law_runs WHERE version_id = $1 AND content_hash = $2 ORDER BY ran_at DESC LIMIT 1',
+      [v.id, hashBlueprint(bp)])).rows[0];
+    if (!g?.passed) throw new AxelError('GATE_NOT_PASSED', 422, g
+      ? 'The last Release Gate run on this draft failed. Fix the problem and run the gate again.'
+      : 'Run the Release Gate on this draft before publishing.');
+    gateProof = { passed: true, steps: g.steps, seed: Number(g.seed), durationMs: g.duration_ms };
+  }
 
   const changes = cur ? summarize(cur.config, bp) : [];
   const destructive = cur ? await stranded(c, cur.config, bp) : [];
@@ -86,7 +97,7 @@ async function deploy(req: any, c: Tx, targetId: string, o: { rollback: boolean;
   const proof = {
     versionHash: hash, compiledAt: new Date().toISOString(), errors: 0,
     warnings: compiled.diagnostics.filter(d => d.severity === 'warning').length,
-    changes, destructive, dataPreserved: true, kind: o.rollback ? 'rollback' : 'publish',
+    changes, destructive, dataPreserved: true, kind: o.rollback ? 'rollback' : 'publish', gate: gateProof,
   };
   const dep = (await c.query(
     'INSERT INTO site_deployments (site_id, version_id, proof, deployed_by, rollback_of) VALUES ($1,$2,$3,$4,$5) RETURNING id',
@@ -159,7 +170,15 @@ versionsRouter.post('/publish', ah(async (req, res) => {
 
 versionsRouter.post('/rollback', ah(async (req, res) => {
   const b = z.object({ versionId: z.string().uuid(), confirm: z.boolean().default(false) }).parse(req.body);
-  const r = await withSite(req.site!.ctx, c => deploy(req, c, b.versionId, { rollback: true, confirm: b.confirm }));
+  const s = req.site!;
+  const target = await withSite(s.ctx, async c => (await c.query('SELECT config FROM site_versions WHERE id = $1', [b.versionId])).rows[0]);
+  if (!target) throw notFound();
+  const report = await runGate(s.siteId, s.ctx.userId, b.versionId, pin(req, target.config), { steps: 150 });
+  if (!report.passed && !b.confirm)
+    throw new AxelError('GATE_NOT_PASSED', 422,
+      `That older version breaks a Law: ${report.counterExample?.message ?? report.laws.find(l => !l.passed)?.detail ?? report.compileErrors[0] ?? 'see the gate report'}`, { report });
+  const gate = { passed: report.passed, steps: report.steps, seed: report.seed, durationMs: report.durationMs };
+  const r = await withSite(s.ctx, c => deploy(req, c, b.versionId, { rollback: true, confirm: b.confirm, gate }));
   invalidate(req.site!.siteId);
   res.json(r);
 }));

@@ -10,6 +10,7 @@
     "test:workflow": "tsx --env-file=../../.env --test test/workflow.test.ts",
     "test:excel": "tsx --env-file=../../.env --test test/excel.test.ts",
     "test:api": "tsx --env-file=../../.env --test test/api.test.ts",
+    "test:gate": "tsx --env-file=../../.env --test test/gate.test.ts",
     "docs": "tsx scripts/gen-docs.ts"
   },
   "dependencies": {
