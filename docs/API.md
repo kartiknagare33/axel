@@ -14,6 +14,11 @@ REST over Express, JSON bodies, `Authorization: Bearer <jwt>`. Every site-scoped
 | GET | `/api/sites` | signed in | sites you belong to, with theme and modules |
 | POST | `/api/sites` | hub admin | `{ name, slug, preset? }` creates and publishes a site |
 | POST | `/api/sites/infer?name=&slug=&create=` | hub admin; body is the raw .xlsx. `create=false` returns the proposed Blueprint, inferences (rule, confidence, explanation) and diagnostics; `create=true` creates the site and imports the rows |
+| GET | `/api/sites/:siteId/explain` | Admin: plain-language description of the unit (markdown) |
+| GET | `/api/sites/:siteId/openapi.json` | Admin: OpenAPI 3.1 for the unit's entities and steps |
+| GET | `/api/sites/:siteId/export` | Admin: zip with Blueprint, README, OpenAPI, data.xlsx and deploy history |
+| GET | `/api/hub/isolation-ledger` | hub admin: RLS, policies, keys and role facts for every table |
+| POST | `/api/hub/isolation-ledger/check` | hub admin: live cross-unit read, write and pooled-connection checks |
 | GET | `/api/sites/:siteId/members` | Admin: members and roles |
 | POST | `/api/sites/:siteId/members` | Admin: `{ email, role, name?, password? }` (creates the account if new) |
 | PATCH | `/api/sites/:siteId/members/:userId` | Admin: `{ role }`; changing your own role is refused |
@@ -53,6 +58,7 @@ Preview: any GET with header `X-Preview-Version: <draftId>` (Admin only) reads l
 | GET | `/api/:siteId/:entity/:id/timeline` | audit events and ledger movements |
 | POST | `/api/:siteId/item/:id/stock` | `{ kind: receive or adjust, qty, idempotencyKey }` (Manager+) |
 | GET | `/api/:siteId/analytics/:widgetId` | aggregated, respects masks |
+| GET | `/api/:siteId/timeline?serial=` | every record, step and stock movement for one serial number (units with serials) |
 | GET | `/api/:siteId/approvals` | decision history |
 | POST | `/api/:siteId/approvals` | `{ requestId, decision, note? }` (same engine as transition) |
 | GET | `/api/:siteId/assignments` | assignments |

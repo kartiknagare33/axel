@@ -10,7 +10,7 @@ Axel runs many completely different operations sites from one codebase. Each uni
 - **Build without code.** Drag modules onto a canvas with typed ports. The builder explains problems in plain English ("Approval requires Request") and fixes most of them in one click.
 - **Publish live, roll back safely.** Preview a draft on real data, publish with no restart, and every open window updates by itself. Roll back to any earlier version; data is never deleted.
 - **Transactional stock.** Approve reserves stock, assign or repair commits it, return gives it back. 50 concurrent approvals against 10 units: exactly 10 succeed (Chaos test on the hub).
-- **Isolation you can prove.** FORCE row-level security, composite foreign keys, transaction-local site context, 404-not-403 for other sites. 35 automated tests.
+- **Isolation you can prove.** FORCE row-level security, composite foreign keys, transaction-local site context, 404-not-403 for other sites. 39 automated tests.
 - **Excel with role rules.** Templates with dropdowns, dry-run imports with row-by-row errors, all-or-nothing commits, exports that leave out what your role cannot see.
 
 ## Release Gate and Laws
@@ -38,6 +38,13 @@ Try it with the generated registers: `pnpm registers` writes four workbooks to `
 ## People
 
 Each unit's builder has a **People** tab: Admins add members by email (creating the account with a starting password if needed), change roles (Public, Member, Manager, Admin) and remove members. Nobody can change their own role; the database enforces this too.
+
+## Proof and no lock-in
+
+- **Isolation Ledger** (hub, hub admins): every business table with row-level security enabled and forced, its policies, composite foreign keys and site-scoped unique indexes; proof that the API's database role cannot bypass RLS and owns no tables; the last Release Gate per unit; and a **live isolation check** that tries every pair of units in front of you.
+- **Export** (builder): a zip with `blueprint.json`, a generated plain-language `README.md`, `openapi.json`, all data as `data.xlsx`, and the deploy history with proofs.
+- **Explain** (builder): the unit described in plain English, generated from its Blueprint.
+- **Board history** (units with PCB Repair): every request, repair log, step and stock movement for one serial number on a single timeline.
 
 ## Quick start
 
@@ -108,7 +115,7 @@ axel/
 
 ## Tests
 
-Run with Axel started: `pnpm test` (35 tests).
+Run with Axel started: `pnpm test` (39 tests).
 
 | Suite | Proves |
 |---|---|
@@ -117,6 +124,7 @@ Run with Axel started: `pnpm test` (35 tests).
 | `test:excel` (4) | Dry-run row errors, all-or-nothing commit, Member cannot import, export follows the role mask |
 | `test:api` (4) | Every brief endpoint works for its site and refuses other sites |
 | `test:gate` (4) | Unchanged sites pass the gate, a leaked price is blocked by a Law, a shortcut that skips approval is caught with a counter-example, publishing without a passing gate is refused |
+| `test:stage` (4) | Isolation Ledger shows RLS forced everywhere and its live check passes; the export zip has Blueprint, README, OpenAPI, data and history; Explain describes the unit; board history finds a serial and refuses other units |
 | `test:infer` (4) | A repair register infers approval, repair and returns with a mapped formula; a stock sheet infers a sidebar inventory site; the upload endpoint is hub-admin only; members can be added, re-roled and removed but never change their own role |
 | `test:replay` (4) | An unchanged draft replays identically, a stricter rule shows which past requests it would block, a removed state with records is reported with plans, publishing it without a plan is refused |
 
@@ -139,4 +147,4 @@ Regenerate the generated docs with `pnpm docs`.
 
 ## What comes next
 
-Built: Release Gate with Laws, Replay Report, Impact Report and Sheet Inferencer (above). Possible next steps: Record mode (derive a workflow by acting it out), offline field consumption, serial-number scanning.
+Built: Release Gate with Laws, Replay Report, Impact Report and Sheet Inferencer (above). Possible next steps: Record mode (derive a workflow by acting it out), offline field consumption, camera scanning of serial labels.

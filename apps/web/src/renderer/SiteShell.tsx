@@ -7,6 +7,7 @@ import { errOf } from '../api';
 import { Denial } from './fields';
 import { PageView } from './views';
 import { RecordDetail } from './RecordDetail';
+import { SerialTimeline } from './SerialTimeline';
 
 function Skeleton({ label, color }: { label: string; color?: string }) {
   return (
@@ -65,7 +66,8 @@ function NavItems({ variant }: { variant: 'sidebar' | 'top' | 'pill' | 'rail' })
     pill: `rounded-full px-3 py-1 text-sm ${isActive ? 'bg-white font-medium text-primary' : 'text-white/80 hover:bg-white/10'}`,
     rail: `block border-l-4 px-4 py-2 text-sm ${isActive ? 'border-primary bg-primary/5 font-medium text-primary' : 'border-transparent text-slate-600 hover:bg-slate-50'}`,
   })[variant];
-  return <>{schema.nav.map(n => <NavLink key={n.path} to={base + n.path} className={cls}>{n.label}</NavLink>)}</>;
+  const items = schema.modules.includes('pcb-repair') ? [...schema.nav, { label: 'Board history', path: '/timeline' }] : schema.nav;
+  return <>{items.map(n => <NavLink key={n.path} to={base + n.path} className={cls}>{n.label}</NavLink>)}</>;
 }
 
 function SidebarLayout({ children }: { children: ReactNode }) {
@@ -194,6 +196,7 @@ function SiteBody({ site, preview }: { site: SiteSummary; preview: string | null
             <Route index element={<Navigate to={base + home} replace />} />
             {s.pages.map(p => <Route key={p.path} path={p.path.replace(/^\//, '')} element={<PageView page={p} />} />)}
             <Route path="r/:entity/:id" element={<RecordDetail />} />
+            <Route path="timeline" element={<SerialTimeline />} />
             <Route path="*" element={<Denial err={{ message: 'That page is not part of this site.' }} />} />
           </Routes>
         </Layout>

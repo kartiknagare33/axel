@@ -67,7 +67,11 @@
 - **Export**: includes Unit price and Stock value.
 - As `member@cs.dev`: **Export** has no price columns (About sheet says why); **Import** is refused by the server with an explanation.
 
-## Close: prove isolation (1 min)
+## Close: prove isolation and zero lock-in (1 min)
+
+- Hub, **Isolation Ledger**: every table shows RLS enabled and forced, composite keys, and the API role cannot bypass RLS and owns no tables. Click **Run live isolation check**: every pair of units reads 0 rows of the other, writes across units are refused, 30 parallel pooled requests never mix.
+- Any builder, **Export**: a zip with the Blueprint, a plain-language README, OpenAPI, all data as Excel and the deploy history with proofs. "You can leave any time."
+- Service Centre, **Board history**: type a serial such as `PCB-24001` to see the whole life of one board.
 
 - Show the terminal with `pnpm test` all green, or run `pnpm test:isolation` live (about 4 seconds).
 - Explain: FORCE RLS, composite keys, transaction-local site context, 404-not-403, cache wipe on switch.

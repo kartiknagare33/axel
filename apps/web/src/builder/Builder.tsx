@@ -244,6 +244,30 @@ function BuilderInner() {
     finally { setGating(false); }
   }
 
+  async function exportSite() {
+    try {
+      const r = await http.get(`/sites/${siteId}/export`, { ...H, responseType: 'blob' });
+      const url = URL.createObjectURL(r.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${site?.slug ?? 'site'}-export.zip`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { setMsg({ kind: 'err', text: errOf(e).message }); }
+  }
+
+  async function explainSite() {
+    try {
+      const r = await http.get(`/sites/${siteId}/explain`, { ...H, responseType: 'text' });
+      const w = window.open('', '_blank');
+      if (!w) return;
+      w.document.title = `${site?.name ?? 'Site'} - explained`;
+      const pre = w.document.createElement('pre');
+      pre.textContent = String(r.data);
+      pre.style.cssText = 'white-space:pre-wrap;font:14px/1.6 ui-monospace,Consolas,monospace;padding:24px;max-width:960px;margin:auto';
+      w.document.body.appendChild(pre);
+    } catch (e) { setMsg({ kind: 'err', text: errOf(e).message }); }
+  }
+
   async function runImpact(versionId?: string) {
     const id = versionId ?? (dirty || !draft ? await save() : draft.id);
     if (!id) return null;
@@ -354,6 +378,8 @@ function BuilderInner() {
           <button onClick={discard} disabled={!draft && !dirty} className={ghost}>Discard</button>
           <button onClick={() => save()} disabled={busy || !dirty} className={ghost}>Save draft</button>
           <button onClick={preview} disabled={busy} className={ghost}>Preview</button>
+          <button onClick={explainSite} className={ghost}>Explain</button>
+          <button onClick={exportSite} className={ghost}>Export</button>
           <a href={`/${site.slug}`} target="_blank" rel="noreferrer" className={ghost}>Open live</a>
           <button onClick={() => runGate()} disabled={busy || gating || !!errors.length} className={ghost}>Run gate</button>
           <button onClick={() => publish()} disabled={busy || !!errors.length || (!dirty && !draft)} className={btn}

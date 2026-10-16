@@ -17,6 +17,7 @@
     "test:replay": "pnpm --filter @axel/api test:replay",
     "test:infer": "pnpm --filter @axel/api test:infer",
     "registers": "pnpm --filter @axel/api registers",
-    "test": "pnpm test:isolation && pnpm test:workflow && pnpm test:excel && pnpm test:api && pnpm test:gate && pnpm test:replay && pnpm test:infer"
+    "test:stage": "pnpm --filter @axel/api test:stage",
+    "test": "pnpm test:isolation && pnpm test:workflow && pnpm test:excel && pnpm test:api && pnpm test:gate && pnpm test:replay && pnpm test:infer && pnpm test:stage"
   }
 }

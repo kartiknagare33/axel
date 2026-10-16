@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { site, errOf, type ApiErr } from '../api';
 import { useSite, RANK } from '../hooks';
@@ -80,7 +80,7 @@ function Timeline({ entity, id }: { entity: string; id: string }) {
 
 export function RecordDetail() {
   const { entity = '', id = '' } = useParams();
-  const { siteId, schema } = useSite();
+  const { siteId, schema, base } = useSite();
   const nav = useNavigate();
   const qc = useQueryClient();
   const ent = schema.entities[entity];
@@ -117,7 +117,10 @@ export function RecordDetail() {
               {rec.state && <StateBadge state={rec.state} />}<span>v{rec.row_version}</span>
             </div>
           </div>
-          {canEdit && !editing && <button onClick={() => setEditing(true)} className={btnGhost}>Edit</button>}
+          <div className="flex gap-2">
+            {rec.serial_no && <Link to={`${base}/timeline?serial=${encodeURIComponent(rec.serial_no)}`} className={btnGhost}>Board history</Link>}
+            {canEdit && !editing && <button onClick={() => setEditing(true)} className={btnGhost}>Edit</button>}
+          </div>
         </div>
 
         {editing ? (

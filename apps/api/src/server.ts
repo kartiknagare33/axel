@@ -14,6 +14,9 @@ import { gateRouter } from './gate';
 import { replayRouter } from './replay';
 import { inferRouter } from './infer';
 import { membersRouter } from './members';
+import { exportRouter } from './export';
+import { isolationRouter } from './isolation';
+import { timeline } from './timeline';
 import { errorHandler, ah } from './errors';
 import { pool } from './db';
 import { startPublishListener } from './blueprints';
@@ -31,10 +34,11 @@ app.get('/api/me', requireAuth, ah(async (req, res) => {
 }));
 app.use('/api/sites', sitesRouter);
 app.use('/api/sites', inferRouter);
-app.use('/api/sites/:siteId', requireAuth, siteScope, requireRole('Admin'), versionsRouter, gateRouter, replayRouter, membersRouter);
+app.use('/api/sites/:siteId', requireAuth, siteScope, requireRole('Admin'), versionsRouter, gateRouter, replayRouter, membersRouter, exportRouter);
 app.use('/api/hub', hubRouter);
+app.use('/api/hub', isolationRouter);
 app.use('/api', eventsRouter);
-app.use('/api/:siteId', requireAuth, siteScope, analytics, aliases, workflow, excel, resources);
+app.use('/api/:siteId', requireAuth, siteScope, analytics, aliases, timeline, workflow, excel, resources);
 app.use(errorHandler);
 
 await startPublishListener();

@@ -13,6 +13,7 @@
     "test:gate": "tsx --env-file=../../.env --test test/gate.test.ts",
     "test:replay": "tsx --env-file=../../.env --test test/replay.test.ts",
     "test:infer": "tsx --env-file=../../.env --test test/infer.test.ts",
+    "test:stage": "tsx --env-file=../../.env --test test/stage.test.ts",
     "registers": "tsx scripts/gen-registers.ts",
     "docs": "tsx scripts/gen-docs.ts"
   },
@@ -20,6 +21,7 @@
     "@axel/compiler": "workspace:*",
     "bcryptjs": "^2.4.3",
     "exceljs": "^4.4.0",
+    "jszip": "^3.10.1",
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.0",

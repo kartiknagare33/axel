@@ -7,3 +7,4 @@ export * from './modules';
 export * from './presets';
 export * from './laws';
 export * from './infer';
+export * from './explain';

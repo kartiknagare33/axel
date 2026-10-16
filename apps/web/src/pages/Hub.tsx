@@ -62,6 +62,7 @@ export default function Hub() {
       <header className="flex items-center justify-between border-b bg-white px-6 py-3">
         <div className="text-lg font-bold">Axel <span className="font-normal text-slate-400">hub</span></div>
         <div className="flex items-center gap-4 text-sm">
+          {user?.hubAdmin && <Link to="/hub/ledger" className="text-slate-500 hover:text-slate-900">Isolation Ledger</Link>}
           <span>{user?.name}</span>
           <button onClick={logout} className="text-slate-500 hover:text-slate-900">Log out</button>
         </div>
