@@ -15,6 +15,7 @@ import { LawsPanel, RoleToggle } from './LawsPanel';
 import { WorkflowPanel } from './WorkflowPanel';
 import { ImpactPanel } from './ImpactPanel';
 import { ReleasesPanel } from './ReleasesPanel';
+import { PeoplePanel } from './PeoplePanel';
 
 const CORE = new Set(['auth', 'users', 'dashboard']);
 const PORT_COLOR: Record<string, string> = {
@@ -141,7 +142,7 @@ function BuilderInner() {
   const [dirty, setDirty] = useState(false);
   const [history, setHistory] = useState<Blueprint[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [tab, setTab] = useState<'problems' | 'module' | 'workflow' | 'laws' | 'gate' | 'impact' | 'theme' | 'json' | 'versions'>('problems');
+  const [tab, setTab] = useState<'problems' | 'module' | 'workflow' | 'laws' | 'gate' | 'impact' | 'theme' | 'json' | 'versions' | 'people'>('problems');
   const [gate, setGate] = useState<any>(null);
   const [gating, setGating] = useState(false);
   const [impact, setImpact] = useState<any>(null);
@@ -408,7 +409,7 @@ function BuilderInner() {
 
         <aside className="flex min-h-0 flex-col border-l bg-white">
           <nav className="flex flex-wrap border-b text-xs">
-            {([['problems', `Problems${errors.length ? ` (${errors.length})` : ''}`], ['module', 'Module'], ['workflow', 'Workflow'], ['laws', 'Laws'], ['gate', 'Gate'], ['impact', 'Impact'], ['theme', 'Theme'], ['json', 'JSON'], ['versions', 'Versions']] as const).map(([k, label]) => (
+            {([['problems', `Problems${errors.length ? ` (${errors.length})` : ''}`], ['module', 'Module'], ['workflow', 'Workflow'], ['laws', 'Laws'], ['gate', 'Gate'], ['impact', 'Impact'], ['theme', 'Theme'], ['json', 'JSON'], ['versions', 'Versions'], ['people', 'People']] as const).map(([k, label]) => (
               <button key={k} onClick={() => setTab(k)} className={`flex-1 border-b-2 px-2 py-2 ${tab === k ? 'border-slate-900 font-medium' : 'border-transparent text-slate-500'}`}>{label}</button>
             ))}
           </nav>
@@ -419,6 +420,7 @@ function BuilderInner() {
             {tab === 'impact' && <ImpactPanel report={impact} running={impacting} onRun={() => runImpact()} plans={plans} setPlans={setPlans} />}
             {tab === 'laws' && <LawsPanel bp={bp} update={update} />}
             {tab === 'gate' && <GatePanel gate={gate} gating={gating} onRun={steps => runGate(steps)} />}
+            {tab === 'people' && <PeoplePanel siteId={siteId} H={H} />}
             {tab === 'theme' && <ThemePanel bp={bp} update={update} />}
             {tab === 'json' && <JsonPanel bp={bp} update={update} />}
             {tab === 'versions' && <ReleasesPanel siteId={siteId} H={H} refreshKey={versionsKey} onChanged={async m => { setMsg(m); setVersionsKey(k => k + 1); await load(); }} />}

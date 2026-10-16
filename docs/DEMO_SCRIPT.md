@@ -53,6 +53,14 @@
 
 *Say:* "We test changes against what actually happened, not against what we imagine. And no rollback ever loses data."
 
+## A fourth unit from a spreadsheet (1.5 min)
+
+- Hub, **+ From a spreadsheet**, choose `demo/registers/Workshop_Tools.xlsx` (or a judge's own register), **Read spreadsheet**.
+- Walk through a few inferences: the Tool column became the item list, Status values became the workflow, "Returned On" enabled Return Management, unit prices are hidden from Members by default. Point at the confidence bars.
+- **Create unit**. The builder opens on the new unit with its rows already imported. **People** tab: add `member@cs.dev` as Member; in the second window that user now sees the new unit on the hub.
+
+*Say:* "We did not design this site. We read the spreadsheet the unit already keeps, and every guess is explained."
+
 ## Brief step 4: Excel with role rules (1.5 min)
 
 - As `manager@cs.dev`, Central Stores, Stock register: **Template** (dropdowns), fill two rows with one missing SKU, **Import**, **Check file**: the row is reported. Fix, import; stock appears through the ledger.

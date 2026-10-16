@@ -12,6 +12,8 @@
     "test:api": "tsx --env-file=../../.env --test test/api.test.ts",
     "test:gate": "tsx --env-file=../../.env --test test/gate.test.ts",
     "test:replay": "tsx --env-file=../../.env --test test/replay.test.ts",
+    "test:infer": "tsx --env-file=../../.env --test test/infer.test.ts",
+    "registers": "tsx scripts/gen-registers.ts",
     "docs": "tsx scripts/gen-docs.ts"
   },
   "dependencies": {

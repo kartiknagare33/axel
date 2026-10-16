@@ -13,6 +13,11 @@ REST over Express, JSON bodies, `Authorization: Bearer <jwt>`. Every site-scoped
 | GET | `/api/me` | signed in | user and memberships |
 | GET | `/api/sites` | signed in | sites you belong to, with theme and modules |
 | POST | `/api/sites` | hub admin | `{ name, slug, preset? }` creates and publishes a site |
+| POST | `/api/sites/infer?name=&slug=&create=` | hub admin; body is the raw .xlsx. `create=false` returns the proposed Blueprint, inferences (rule, confidence, explanation) and diagnostics; `create=true` creates the site and imports the rows |
+| GET | `/api/sites/:siteId/members` | Admin: members and roles |
+| POST | `/api/sites/:siteId/members` | Admin: `{ email, role, name?, password? }` (creates the account if new) |
+| PATCH | `/api/sites/:siteId/members/:userId` | Admin: `{ role }`; changing your own role is refused |
+| DELETE | `/api/sites/:siteId/members/:userId` | Admin: remove a member (not yourself) |
 | GET | `/api/sites/:siteId/render-schema` | member | the compiled schema the renderer draws, masked for your role |
 | GET | `/api/events?token=` | signed in | server-sent events: `site_published`, `record_changed` |
 | POST | `/api/hub/chaos` | hub admin | `{ concurrency: 50, stock: 10 }` runs concurrent approvals and verifies the ledger |

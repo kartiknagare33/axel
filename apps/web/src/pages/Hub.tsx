@@ -6,6 +6,7 @@ import { useSites } from '../hooks';
 import { useSession } from '../store/session';
 import { http, errOf } from '../api';
 import { ChaosCard } from './Chaos';
+import { SheetUnit } from './SheetUnit';
 
 const CORE = new Set(['auth', 'users', 'dashboard']);
 const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
@@ -71,7 +72,7 @@ export default function Hub() {
             <h1 className="text-2xl font-semibold">Your units</h1>
             <p className="text-sm text-slate-500">One login, one codebase. Each unit runs its own published Blueprint.</p>
           </div>
-          {user?.hubAdmin && <NewUnit />}
+          {user?.hubAdmin && <div className="flex flex-col items-end gap-2"><NewUnit /><SheetUnit /></div>}
         </div>
         {sites.isLoading && <div className="h-32 animate-pulse rounded-xl bg-slate-200" />}
         <div className="grid gap-4 sm:grid-cols-3">
