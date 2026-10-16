@@ -8,6 +8,7 @@ import { AxelError, ah, notFound } from './errors';
 import { hashBlueprint } from './sites';
 import { invalidate } from './blueprints';
 import { runGate } from './laws';
+import { impactReport } from './impact';
 
 // Mounted at /api/sites/:siteId with requireAuth, siteScope, requireRole('Admin').
 export const versionsRouter = Router({ mergeParams: true });
@@ -53,7 +54,7 @@ async function stranded(c: Tx, a: Blueprint, b: Blueprint) {
   return out;
 }
 
-async function deploy(req: any, c: Tx, targetId: string, o: { rollback: boolean; confirm: boolean; reason?: string; gate?: any }) {
+async function deploy(req: any, c: Tx, targetId: string, o: { rollback: boolean; confirm: boolean; reason?: string; gate?: any; plans?: Record<string, string>; replay?: any }) {
   const s = req.site;
   const cur = (await c.query(
     `SELECT v.id, v.config FROM sites st JOIN site_versions v ON v.id = st.published_version_id WHERE st.id = $1 FOR UPDATE OF st`,
@@ -80,8 +81,31 @@ async function deploy(req: any, c: Tx, targetId: string, o: { rollback: boolean;
   }
 
   const changes = cur ? summarize(cur.config, bp) : [];
-  const destructive = cur ? await stranded(c, cur.config, bp) : [];
-  if (destructive.length && !o.confirm) throw new AxelError('DESTRUCTIVE_CHANGE_UNPLANNED', 409, destructive.join(' '), { destructive, changes });
+  const impact = cur ? await impactReport(c, cur.config, bp) : [];
+  const strandedStates = impact.filter(i => i.kind === 'state_removed' && (i.count ?? 0) > 0);
+  const unplanned = strandedStates.filter(i => !o.plans?.[`${i.entity}.${i.state}`] && !o.confirm);
+  if (unplanned.length)
+    throw new AxelError('DESTRUCTIVE_CHANGE_UNPLANNED', 409, `${unplanned.map(i => i.detail).join(' ')} Choose a plan for each in the Impact list.`, { impact, changes });
+  const destructive: string[] = [];
+  const planned: Record<string, string> = {};
+  for (const i of strandedStates) {
+    const key = `${i.entity}.${i.state}`;
+    const p = o.plans?.[key] ?? 'keep';
+    planned[key] = p;
+    if (p.startsWith('map:')) {
+      const target = p.slice(4);
+      if (!bp.workflows[i.entity!]?.states.includes(target)) throw new AxelError('VALIDATION_FAILED', 422, `'${target}' is not a state in the version being deployed.`);
+      const moved = (await c.query(
+        `UPDATE ${TABLES[i.entity!].table} SET state = $2, row_version = row_version + 1, updated_at = now() WHERE state = $1 RETURNING id`,
+        [i.state, target])).rows;
+      for (const m of moved)
+        await c.query(
+          `INSERT INTO audit_events (site_id, entity, record_id, kind, from_state, to_state, actor_id, actor_role, after, version_id)
+           VALUES ($1,$2,$3,'rollback_map',$4,$5,$6,$7,$8,$9)`,
+          [s.siteId, i.entity, m.id, i.state, target, s.ctx.userId, s.role, { plan: p }, v.id]);
+      destructive.push(`${moved.length} ${i.entity}(s) moved from '${i.state}' to '${target}'.`);
+    } else destructive.push(`${i.count} ${i.entity}(s) stay in '${i.state}' (read-only, data kept).`);
+  }
 
   const hash = hashBlueprint(bp);
   let liveId = v.id as string;
@@ -97,7 +121,7 @@ async function deploy(req: any, c: Tx, targetId: string, o: { rollback: boolean;
   const proof = {
     versionHash: hash, compiledAt: new Date().toISOString(), errors: 0,
     warnings: compiled.diagnostics.filter(d => d.severity === 'warning').length,
-    changes, destructive, dataPreserved: true, kind: o.rollback ? 'rollback' : 'publish', gate: gateProof,
+    changes, destructive, dataPreserved: true, kind: o.rollback ? 'rollback' : 'publish', gate: gateProof, plans: planned, replay: o.replay ?? null,
   };
   const dep = (await c.query(
     'INSERT INTO site_deployments (site_id, version_id, proof, deployed_by, rollback_of) VALUES ($1,$2,$3,$4,$5) RETURNING id',
@@ -162,14 +186,17 @@ versionsRouter.delete('/versions/:v', ah(async (req, res) => {
 }));
 
 versionsRouter.post('/publish', ah(async (req, res) => {
-  const b = z.object({ versionId: z.string().uuid(), reason: z.string().max(200).optional(), confirm: z.boolean().default(false) }).parse(req.body);
-  const r = await withSite(req.site!.ctx, c => deploy(req, c, b.versionId, { rollback: false, confirm: b.confirm, reason: b.reason }));
+  const b = z.object({
+    versionId: z.string().uuid(), reason: z.string().max(200).optional(), confirm: z.boolean().default(false),
+    plans: z.record(z.string()).optional(), replay: z.record(z.unknown()).optional(),
+  }).parse(req.body);
+  const r = await withSite(req.site!.ctx, c => deploy(req, c, b.versionId, { rollback: false, confirm: b.confirm, reason: b.reason, plans: b.plans, replay: b.replay }));
   invalidate(req.site!.siteId);
   res.json(r);
 }));
 
 versionsRouter.post('/rollback', ah(async (req, res) => {
-  const b = z.object({ versionId: z.string().uuid(), confirm: z.boolean().default(false) }).parse(req.body);
+  const b = z.object({ versionId: z.string().uuid(), confirm: z.boolean().default(false), plans: z.record(z.string()).optional() }).parse(req.body);
   const s = req.site!;
   const target = await withSite(s.ctx, async c => (await c.query('SELECT config FROM site_versions WHERE id = $1', [b.versionId])).rows[0]);
   if (!target) throw notFound();
@@ -178,7 +205,7 @@ versionsRouter.post('/rollback', ah(async (req, res) => {
     throw new AxelError('GATE_NOT_PASSED', 422,
       `That older version breaks a Law: ${report.counterExample?.message ?? report.laws.find(l => !l.passed)?.detail ?? report.compileErrors[0] ?? 'see the gate report'}`, { report });
   const gate = { passed: report.passed, steps: report.steps, seed: report.seed, durationMs: report.durationMs };
-  const r = await withSite(s.ctx, c => deploy(req, c, b.versionId, { rollback: true, confirm: b.confirm, gate }));
+  const r = await withSite(s.ctx, c => deploy(req, c, b.versionId, { rollback: true, confirm: b.confirm, gate, plans: b.plans }));
   invalidate(req.site!.siteId);
   res.json(r);
 }));

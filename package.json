@@ -14,6 +14,7 @@
     "test:api": "pnpm --filter @axel/api test:api",
     "docs": "pnpm --filter @axel/api docs",
     "test:gate": "pnpm --filter @axel/api test:gate",
-    "test": "pnpm test:isolation && pnpm test:workflow && pnpm test:excel && pnpm test:api && pnpm test:gate"
+    "test:replay": "pnpm --filter @axel/api test:replay",
+    "test": "pnpm test:isolation && pnpm test:workflow && pnpm test:excel && pnpm test:api && pnpm test:gate && pnpm test:replay"
   }
 }

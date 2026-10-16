@@ -45,6 +45,14 @@
 
 *Say:* "Nobody tests by hand. The gate acts out hundreds of random sessions on real data, rolls everything back, and refuses to publish anything that breaks a rule."
 
+## Replay and Impact (1.5 min)
+
+- Service Centre builder, **Workflow** tab: on **Approve**, type the rule `qty <= 1` and click elsewhere.
+- **Impact** tab, **Run replay and impact**: "N of 50 past requests go exactly the same way", plus the requests the new rule would block and at which step. Click **Undo**.
+- Distribution (after enabling Returns and returning one request): **Versions** tab, **Roll back to this version** on the version before Returns. The Impact list shows "1 request(s) are in 'returned', which this version removes". Choose **Move these records to 'closed'** and **Roll back now**. The record moves, the timeline records it, nothing is deleted.
+
+*Say:* "We test changes against what actually happened, not against what we imagine. And no rollback ever loses data."
+
 ## Brief step 4: Excel with role rules (1.5 min)
 
 - As `manager@cs.dev`, Central Stores, Stock register: **Template** (dropdowns), fill two rows with one missing SKU, **Import**, **Check file**: the row is reported. Fix, import; stock appears through the ledger.

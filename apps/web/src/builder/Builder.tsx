@@ -12,6 +12,9 @@ import {
 import { http, errOf } from '../api';
 import { GatePanel } from './GatePanel';
 import { LawsPanel, RoleToggle } from './LawsPanel';
+import { WorkflowPanel } from './WorkflowPanel';
+import { ImpactPanel } from './ImpactPanel';
+import { ReleasesPanel } from './ReleasesPanel';
 
 const CORE = new Set(['auth', 'users', 'dashboard']);
 const PORT_COLOR: Record<string, string> = {
@@ -138,9 +141,12 @@ function BuilderInner() {
   const [dirty, setDirty] = useState(false);
   const [history, setHistory] = useState<Blueprint[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [tab, setTab] = useState<'problems' | 'module' | 'laws' | 'gate' | 'theme' | 'json' | 'versions'>('problems');
+  const [tab, setTab] = useState<'problems' | 'module' | 'workflow' | 'laws' | 'gate' | 'impact' | 'theme' | 'json' | 'versions'>('problems');
   const [gate, setGate] = useState<any>(null);
   const [gating, setGating] = useState(false);
+  const [impact, setImpact] = useState<any>(null);
+  const [impacting, setImpacting] = useState(false);
+  const [plans, setPlans] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<Msg>(null);
   const [busy, setBusy] = useState(false);
   const [rfNodes, setRfNodes] = useState<any[]>([]);
@@ -237,16 +243,44 @@ function BuilderInner() {
     finally { setGating(false); }
   }
 
-  async function publish(confirm = false) {
+  async function runImpact(versionId?: string) {
+    const id = versionId ?? (dirty || !draft ? await save() : draft.id);
+    if (!id) return null;
+    setTab('impact'); setImpacting(true); setImpact(null);
+    try {
+      const r = await http.post(`/sites/${siteId}/versions/${id}/replay`, { sample: 50 }, H);
+      setImpact(r.data);
+      return r.data;
+    } catch (e) { setMsg({ kind: 'err', text: errOf(e).message }); return null; }
+    finally { setImpacting(false); }
+  }
+
+  async function publish(confirm = false, reviewed = false) {
     const id = dirty || !draft ? await save() : draft.id;
     if (!id) return;
-    if (!confirm) {
+    let rep = impact;
+    if (!confirm && !reviewed) {
       const g = await runGate(300, id);
       if (!g?.passed) { setMsg({ kind: 'err', text: 'The Release Gate blocked this draft, so nothing was published. See the Gate tab.' }); return; }
+      rep = await runImpact(id);
+      if (!rep) return;
+      const strandedStates = (rep.impact ?? []).filter((i: any) => i.kind === 'state_removed' && i.count > 0);
+      if (rep.divergent?.length || strandedStates.length) {
+        setMsg({
+          kind: 'warn',
+          text: `Review before publishing: ${rep.divergent?.length ?? 0} of ${rep.sampled} past requests would go differently${strandedStates.length ? `, and ${strandedStates.length} removed state(s) still hold records (choose a plan in the Impact tab)` : ''}.`,
+          action: { label: 'Reviewed - publish', run: () => publish(false, true) },
+        });
+        return;
+      }
     }
     setBusy(true);
     try {
-      const r = await http.post(`/sites/${siteId}/publish`, { versionId: id, confirm }, H);
+      const r = await http.post(`/sites/${siteId}/publish`, {
+        versionId: id, confirm, plans,
+        replay: rep ? { sampled: rep.sampled, identical: rep.identical, divergent: rep.divergent?.length ?? 0, reviewed } : undefined,
+      }, H);
+      setPlans({});
       setMsg({ kind: 'ok', text: `Published. ${r.data.changes.length ? r.data.changes.join(', ') + '.' : ''} Open windows of this site update by themselves.` });
       setVersionsKey(k => k + 1);
       await load();
@@ -373,19 +407,21 @@ function BuilderInner() {
         </div>
 
         <aside className="flex min-h-0 flex-col border-l bg-white">
-          <nav className="flex border-b text-xs">
-            {([['problems', `Problems${errors.length ? ` (${errors.length})` : ''}`], ['module', 'Module'], ['laws', 'Laws'], ['gate', 'Gate'], ['theme', 'Theme'], ['json', 'JSON'], ['versions', 'Versions']] as const).map(([k, label]) => (
+          <nav className="flex flex-wrap border-b text-xs">
+            {([['problems', `Problems${errors.length ? ` (${errors.length})` : ''}`], ['module', 'Module'], ['workflow', 'Workflow'], ['laws', 'Laws'], ['gate', 'Gate'], ['impact', 'Impact'], ['theme', 'Theme'], ['json', 'JSON'], ['versions', 'Versions']] as const).map(([k, label]) => (
               <button key={k} onClick={() => setTab(k)} className={`flex-1 border-b-2 px-2 py-2 ${tab === k ? 'border-slate-900 font-medium' : 'border-transparent text-slate-500'}`}>{label}</button>
             ))}
           </nav>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             {tab === 'problems' && <ProblemsPanel diags={diags} changes={changes} onFix={d => update(applyFix(bp, d.fix?.patch))} onSelect={id => { setSelected(id); setTab('module'); }} />}
             {tab === 'module' && <ModulePanel bp={bp} id={selected} update={update} onRemove={id => { update(removeModule(bp, id)); setSelected(null); }} />}
+            {tab === 'workflow' && <WorkflowPanel bp={bp} update={update} />}
+            {tab === 'impact' && <ImpactPanel report={impact} running={impacting} onRun={() => runImpact()} plans={plans} setPlans={setPlans} />}
             {tab === 'laws' && <LawsPanel bp={bp} update={update} />}
             {tab === 'gate' && <GatePanel gate={gate} gating={gating} onRun={steps => runGate(steps)} />}
             {tab === 'theme' && <ThemePanel bp={bp} update={update} />}
             {tab === 'json' && <JsonPanel bp={bp} update={update} />}
-            {tab === 'versions' && <VersionsPanel siteId={siteId} H={H} refreshKey={versionsKey} onChanged={async m => { setMsg(m); setVersionsKey(k => k + 1); await load(); }} />}
+            {tab === 'versions' && <ReleasesPanel siteId={siteId} H={H} refreshKey={versionsKey} onChanged={async m => { setMsg(m); setVersionsKey(k => k + 1); await load(); }} />}
           </div>
         </aside>
       </div>

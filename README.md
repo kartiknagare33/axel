@@ -10,7 +10,7 @@ Axel runs many completely different operations sites from one codebase. Each uni
 - **Build without code.** Drag modules onto a canvas with typed ports. The builder explains problems in plain English ("Approval requires Request") and fixes most of them in one click.
 - **Publish live, roll back safely.** Preview a draft on real data, publish with no restart, and every open window updates by itself. Roll back to any earlier version; data is never deleted.
 - **Transactional stock.** Approve reserves stock, assign or repair commits it, return gives it back. 50 concurrent approvals against 10 units: exactly 10 succeed (Chaos test on the hub).
-- **Isolation you can prove.** FORCE row-level security, composite foreign keys, transaction-local site context, 404-not-403 for other sites. 27 automated tests.
+- **Isolation you can prove.** FORCE row-level security, composite foreign keys, transaction-local site context, 404-not-403 for other sites. 31 automated tests.
 - **Excel with role rules.** Templates with dropdowns, dry-run imports with row-by-row errors, all-or-nothing commits, exports that leave out what your role cannot see.
 
 ## Release Gate and Laws
@@ -22,6 +22,12 @@ Nothing is published without evidence. Each site declares **Laws** as plain sent
 3. performs hundreds of random actions as Members, Managers and Admins on the site's real data, inside a transaction that is always rolled back, and checks every Law after each step.
 
 If a Law breaks, publish is blocked and the builder shows the counter-example: the exact steps that broke it, with a seed to replay. The proof (steps, seed, duration) is stored on every deployment; rollbacks run a short gate too.
+
+## Replay Report and Impact Report
+
+- **Replay.** Before publishing, Axel takes the last 50 real requests and runs their recorded history (same steps, same roles) through both the live version and the draft, inside a transaction that is rolled back. It reports exactly which requests would now go differently and at which step, for example "3 of 50: submitted > approved would be blocked by a rule".
+- **Impact.** Every change is classified as additive, behavioural or destructive. When a removed state still holds records, publishing or rolling back requires a plan per state: keep those records read-only, or move them to another state (recorded in the audit trail). Fields that disappear are hidden, never dropped.
+- Publish runs Gate, then Replay and Impact; anything that differs must be reviewed first. The replay summary and the chosen plans are stored with the deployment.
 
 ## Quick start
 
@@ -92,7 +98,7 @@ axel/
 
 ## Tests
 
-Run with Axel started: `pnpm test` (27 tests).
+Run with Axel started: `pnpm test` (31 tests).
 
 | Suite | Proves |
 |---|---|
@@ -101,6 +107,7 @@ Run with Axel started: `pnpm test` (27 tests).
 | `test:excel` (4) | Dry-run row errors, all-or-nothing commit, Member cannot import, export follows the role mask |
 | `test:api` (4) | Every brief endpoint works for its site and refuses other sites |
 | `test:gate` (4) | Unchanged sites pass the gate, a leaked price is blocked by a Law, a shortcut that skips approval is caught with a counter-example, publishing without a passing gate is refused |
+| `test:replay` (4) | An unchanged draft replays identically, a stricter rule shows which past requests it would block, a removed state with records is reported with plans, publishing it without a plan is refused |
 
 ## Docs
 
@@ -121,4 +128,4 @@ Regenerate the generated docs with `pnpm docs`.
 
 ## What comes next
 
-Built: the Release Gate with Laws (above). Next: a Replay Report that runs real history through a proposed version, and a Sheet Inferencer that derives a site from a unit's existing spreadsheets.
+Built: the Release Gate with Laws, the Replay Report and the Impact Report (above). Next: a Sheet Inferencer that derives a site from a unit's existing spreadsheets.

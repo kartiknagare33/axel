@@ -26,9 +26,11 @@ REST over Express, JSON bodies, `Authorization: Bearer <jwt>`. Every site-scoped
 | POST | `/api/sites/:siteId/versions` | `{ config }` new draft, returns diagnostics |
 | PUT | `/api/sites/:siteId/versions/:v` | `{ config, expectedRev }`, 409 `DRAFT_CONFLICT` if someone saved meanwhile |
 | DELETE | `/api/sites/:siteId/versions/:v` | discard a draft |
-| POST | `/api/sites/:siteId/publish` | `{ versionId, confirm? }`, refused with 422 if the Blueprint has errors, 409 if records would be stranded |
+| POST | `/api/sites/:siteId/publish` | `{ versionId, plans?, replay?, confirm? }`; `plans` maps `entity.state` to `keep` or `map:<state>`;, refused with 422 if the Blueprint has errors, 409 if records would be stranded |
 | POST | `/api/sites/:siteId/rollback` | `{ versionId, confirm? }` |
 | GET | `/api/sites/:siteId/deployments` | history with proof records |
+| POST | `/api/sites/:siteId/versions/:v/replay` | `{ sample? }` replays the last N real requests through the live version and the draft; returns divergences, a summary and the Impact Report |
+| GET | `/api/sites/:siteId/versions/:v/impact` | Impact Report of a version against live (additive, behavioural, destructive; plan options for removed states) |
 | POST | `/api/sites/:siteId/versions/:v/gate` | `{ steps?, seed? }` runs the Release Gate; returns Laws, counter-example and a sample of the walk. Publish requires a passing run for the exact Blueprint. |
 
 Preview: any GET with header `X-Preview-Version: <draftId>` (Admin only) reads live data through the draft Blueprint. Writes are refused.

@@ -11,6 +11,7 @@ import { eventsRouter } from './events';
 import { excel } from './excel';
 import { aliases } from './aliases';
 import { gateRouter } from './gate';
+import { replayRouter } from './replay';
 import { errorHandler, ah } from './errors';
 import { pool } from './db';
 import { startPublishListener } from './blueprints';
@@ -27,7 +28,7 @@ app.get('/api/me', requireAuth, ah(async (req, res) => {
   res.json({ user: { id: u.id, email: u.email, name: u.name, hubAdmin: u.is_hub_admin }, memberships: await memberships(u.id) });
 }));
 app.use('/api/sites', sitesRouter);
-app.use('/api/sites/:siteId', requireAuth, siteScope, requireRole('Admin'), versionsRouter, gateRouter);
+app.use('/api/sites/:siteId', requireAuth, siteScope, requireRole('Admin'), versionsRouter, gateRouter, replayRouter);
 app.use('/api/hub', hubRouter);
 app.use('/api', eventsRouter);
 app.use('/api/:siteId', requireAuth, siteScope, analytics, aliases, workflow, excel, resources);
