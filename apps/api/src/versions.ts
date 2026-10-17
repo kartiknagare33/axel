@@ -181,7 +181,10 @@ versionsRouter.put('/versions/:v', ah(async (req, res) => {
 
 versionsRouter.delete('/versions/:v', ah(async (req, res) => {
   if (!UUID.test(req.params.v)) throw notFound();
-  await withSite(req.site!.ctx, c => c.query(`DELETE FROM site_versions WHERE id = $1 AND status = 'draft'`, [req.params.v]));
+  await withSite(req.site!.ctx, async c => {
+    await c.query(`DELETE FROM law_runs WHERE version_id = $1 AND version_id IN (SELECT id FROM site_versions WHERE status = 'draft')`, [req.params.v]);
+    await c.query(`DELETE FROM site_versions WHERE id = $1 AND status = 'draft'`, [req.params.v]);
+  });
   res.json({ ok: true });
 }));
 
