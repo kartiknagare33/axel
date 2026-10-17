@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  ReactFlow, ReactFlowProvider, Background, Controls, Handle, Position, useReactFlow,
+  ReactFlow, ReactFlowProvider, Background, Controls, Handle, Position, useReactFlow, useNodesInitialized,
   applyNodeChanges, applyEdgeChanges, type Connection, type NodeChange, type EdgeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -185,6 +185,7 @@ function BuilderInner() {
     setBp(history[history.length - 1]); setHistory(history.slice(0, -1)); setDirty(true);
   };
 
+  const nodesReady = useNodesInitialized();
   // React Flow nodes and edges are a projection of the Blueprint.
   const derivedNodes = useMemo(() => {
     if (!bp) return [];
@@ -206,7 +207,7 @@ function BuilderInner() {
       const t = REGISTRY[e.from.module]?.out.find(p => p.name === e.from.port)?.types[0] ?? 'Any';
       return { id: edgeId(e), source: e.from.module, sourceHandle: e.from.port, target: e.to.module, targetHandle: e.to.port, label: t, style: { stroke: PORT_COLOR[t], strokeWidth: 2 }, labelStyle: { fontSize: 10 } };
     }));
-  }, [bp]);
+  }, [bp, nodesReady]);
 
   const add = (id: string, pos?: { x: number; y: number }) => {
     if (!bp) return;
